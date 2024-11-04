@@ -357,8 +357,9 @@ display: none;
 </div>
 <div id="project-goal" class="section level1">
 <h1>Project Goal:</h1>
-<p>Accurately predict the price of a given AirBNB rental in ______,
-given the metadata about that property.</p>
+<p>Accurately predict the price of a given AirBNB rental in
+<strong>&lt;&lt;&lt; CITY NAME &gt;&gt;&gt;</strong>, given the metadata
+about each property.</p>
 </div>
 <div id="section" class="section level1">
 <h1></h1>
@@ -372,9 +373,17 @@ given the metadata about that property.</p>
 <li><strong>Lat-long data</strong> will likely be critically important
 to deriving rental rates.
 <ul>
-<li>The dataset goes to a minimum of 5 decimal places, which gives us a
+<li>These lat-longs have a minimum of 5 decimal places, which gives us a
 <a href="https://en.wikipedia.org/wiki/Decimal_degrees">spatial
 resolution of ~3ft.</a></li>
+<li>From the <a href="https://insideairbnb.com/data-assumptions/">Data
+Assumptions</a> FAQ:
+<ul>
+<li><em>“Location information for listings are anonymized by Airbnb. In
+practice, this means the location for a listing on the map, or in the
+data will be from 0-450 feet (150 metres) of the actual
+address.”</em></li>
+</ul></li>
 </ul></li>
 <li><strong>TBD</strong> tbd</li>
 </ul>
@@ -384,8 +393,9 @@ resolution of ~3ft.</a></li>
 <ul>
 <li>Lat-long of top 10 TripAdvisor destinations in the area (“# within
 walking distance”)</li>
-<li>Crime rates</li>
-<li></li>
+<li>Crime rates (“Do I really want to stay in this area?”)</li>
+<li>Local rental rates (“How expensive is an equivalent apartment in
+that area?”)</li>
 </ul>
 </div>
 </div>
