@@ -381,11 +381,21 @@ Assumptions</a> FAQ:
 <ul>
 <li><em>“Location information for listings are anonymized by Airbnb. In
 practice, this means the location for a listing on the map, or in the
-data will be from 0-450 feet (150 metres) of the actual
-address.”</em></li>
+data will be from <strong>0-450 feet (150 metres) of the actual
+address</strong>.”</em></li>
 </ul></li>
 </ul></li>
-<li><strong>Amenities</strong> is a JSON array.</li>
+<li><strong>Amenities</strong> is a JSON array.
+<ul>
+<li>These will likely provide very good features for predicting the
+Quality of a lodging</li>
+<li>There are multiple variations on many items (“Coffee maker” vs
+“Coffee maker: drip coffee maker” vs “Coffee maker: Keurig coffee
+machine”), so we’ll have to be careful…</li>
+<li>But, this appears to be a drop-down/list selection - none of the
+items are misspelled, which would imply user manual input - this is good
+news!</li>
+</ul></li>
 </ul>
 </div>
 <div id="possible-supplemental-data" class="section level3">
