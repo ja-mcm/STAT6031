@@ -16,7 +16,7 @@ TBD
   - From the [Data Assumptions](https://insideairbnb.com/data-assumptions/) FAQ: 
     - _"Location information for listings are anonymized by Airbnb. In practice, this means the location for a listing on the map, or in the data will be from __0-450 feet (150 metres) of the actual address__."_
 - __Amenities__ is a JSON array. 
-  - These will likely provide very good features for predicting the Quality of a lodging
+  - These might provide features for predicting the Quality of a lodging (such as: "pool", "stainless steel appliances", etc)
   - There are multiple variations on many items ("Coffee maker" vs "Coffee maker: drip coffee maker" vs "Coffee maker: Keurig coffee machine"), so we'll have to be careful...
   - But, this appears to be a drop-down/list selection - none of the items are misspelled, which would imply user manual input - this is good news!
 

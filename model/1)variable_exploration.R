@@ -1,18 +1,95 @@
 library(data.table)
 library(jsonlite)
-library(rlist)
+library(ggplot2)
 
+# Read in sample data
 bnb_data <- fread("data/Listings_New_Orleans.csv")
 
-### Fix up quotes, so we can parse this JSON
+
+### 1) Parse Amenities JSON
+# -------------------------------
+# Fix up quotes, so we can parse this JSON
 bnb_data[,amenities:=gsub('""','"' , amenities, fixed=TRUE)]
 bnb_data[,amenities_list:=lapply(bnb_data$amenities, function(x) {parse_json(x)})]
 
-# this lives in a list object, which holds all the features for each individual property
+# The parsed JSON now lives in a list object, which holds all the individual features for each property
 bnb_data$amenities_list[1:3]
-bnb_data[amenities_list %like% "Wifi",.N] # 6609 of 7118 have Wifi listed
 
-# Amenities appear to be from a drop-down
-# (while there are multiple variations on this item, none of them are misspelled)
-# <SLOW RUNNING CODE>
-# bnb_data[amenities_list %like% "Coffee",amenities_list] |> rlist::list.search(, expr = grepl("Coffee",.))
+# Collapse list items into a table, for easier review of what these look like...
+all_amenities <- unlist(bnb_data[, amenities_list])  |> data.table()
+all_amenities <- all_amenities[,.N,by=V1][order(-N)]
+
+
+# over 2,000 possible items - we'll have to reduce this....
+
+# 1) Can we combine similar entries?
+# Coffee has 38 distinct entries...
+all_amenities[V1 %like% "Coffee"]
+
+# 2) Ignore "sparse" features
+# Of the 2000+ amenities, only 165 apply to at least 1% of the listings (ie. count of 70 or more)
+
+# 3) Can we identify "premium" features, and disregard the rest?
+  # Pool
+  # Stainless steel appliances
+  # etc
+# Which amenities are strongly associated with higher prices?
+
+
+
+
+### 2) Find bad data
+# -----------------------------------------
+# Remove listings with no price data
+bnb_data[,price:=as.numeric(substring(price,2))] ### Note: drops decimal places, but prices never have cent component
+bnb_data <- bnb_data[nchar(price)>1]
+
+
+### Find potential duplicates
+# based on repeated lat/long (497)
+potential_dupes <- bnb_data[duplicated(bnb_data, by = c("latitude", "longitude")) == "TRUE"][order(latitude,longitude)]
+
+# based on repeated descriptions (199)
+potential_dupes2 <- bnb_data[duplicated(bnb_data, by = c("name")) == "TRUE"][order(latitude,longitude)]
+
+
+
+### 3) Explore
+# -------------------------------------------
+# Inspect distribution of prices
+# Very right-skewed
+ggplot(bnb_data,aes(price)) + geom_histogram()
+
+# Log transform isnt perfect either...
+ggplot(bnb_data,aes(log(price))) + geom_histogram()
+
+
+# Note the anomalous entries @ $999 and $500 price points. What's up with these?
+# We'll need to identify why so that our price prediction accuracy doesn't get tanked.
+
+
+
+
+### FUTURE: Remove unusable columns
+# -------------------------------------------
+ncol(bnb_data) 
+## 76 columns
+
+# Drop all URLs - we don't plan on using these....
+bnb_data[,grep("^.*url$", colnames(bnb_data)):= NULL]
+
+# Drop all the redundant max/min nights variables - keep only the average
+bnb_data[,grep("^.*nights$", colnames(bnb_data)):= NULL]
+
+# Drop columns with only NAs
+bnb_data <- bnb_data[, .SD, .SDcols = \(x) !all(is.na(x))]
+
+# Drop any invariant columns (ie. only 1 value)
+bnb_data <- bnb_data[, !sapply(bnb_data, FUN = function(x) length(unique(x))==1), with = FALSE]
+
+# Drop other misc columns that have no clear use
+bnb_data[,c("host_verifications", "source", "neighbourhood"):=NULL]
+
+
+ncol(bnb_data)
+## 57 columns
