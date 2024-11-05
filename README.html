@@ -367,37 +367,13 @@ about each property.</p>
 <div id="our-model" class="section level1">
 <h1>Our Model</h1>
 <p>TBD</p>
-<div id="research-notes" class="section level3">
-<h3>Research Notes</h3>
+<p><a href="https://towardsdatascience.com/create-predictive-models-in-r-with-caret-12baf9941236">Caret</a>
+is a great general purpose regression/machine learning library in R.</p>
 <ul>
-<li><strong>Lat-long data</strong> will likely be critically important
-to deriving rental rates.
-<ul>
-<li>These lat-longs have a minimum of 5 decimal places, which gives us a
-<a href="https://en.wikipedia.org/wiki/Decimal_degrees">spatial
-resolution of ~3ft.</a></li>
-<li>From the <a href="https://insideairbnb.com/data-assumptions/">Data
-Assumptions</a> FAQ:
-<ul>
-<li><em>“Location information for listings are anonymized by Airbnb. In
-practice, this means the location for a listing on the map, or in the
-data will be from <strong>0-450 feet (150 metres) of the actual
-address</strong>.”</em></li>
-</ul></li>
-</ul></li>
-<li><strong>Amenities</strong> is a JSON array.
-<ul>
-<li>These will likely provide very good features for predicting the
-Quality of a lodging</li>
-<li>There are multiple variations on many items (“Coffee maker” vs
-“Coffee maker: drip coffee maker” vs “Coffee maker: Keurig coffee
-machine”), so we’ll have to be careful…</li>
-<li>But, this appears to be a drop-down/list selection - none of the
-items are misspelled, which would imply user manual input - this is good
-news!</li>
-</ul></li>
+<li>Train/test splitting</li>
+<li>Cross validation</li>
+<li>Pre-processing</li>
 </ul>
-</div>
 <div id="possible-supplemental-data" class="section level3">
 <h3>Possible supplemental data:</h3>
 <ul>
