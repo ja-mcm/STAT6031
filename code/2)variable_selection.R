@@ -17,7 +17,7 @@ filtered_data <- bnb_data %>%
                 host_response_rate, host_acceptance_rate, host_is_superhost,
                 host_total_listings_count, host_has_profile_pic, host_identity_verified,
                 latitude, longitude, room_type, accommodates, bathrooms, beds, price, 
-                #minimum nights, maximum nights, minimum nights avg ntm, maximum nights avg ntm,
+                #minimum nights, maximum nights, minimum_nights_avg_ntm, maximum_nights_avg_ntm,
                 number_of_reviews, review_scores_rating, review_scores_accuracy,
                 review_scores_cleanliness, review_scores_checkin, review_scores_communication, 
                 review_scores_location, review_scores_value,near_top_10)

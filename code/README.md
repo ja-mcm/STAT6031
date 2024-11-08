@@ -1,3 +1,12 @@
+# Modeling
+- We agreed an interaction variable between # of reviews and review score made sense (ie. more good scores counts for more than only a few good scores...)
+- Variables that might need log-transforms:
+     - Price
+     - Near_Top_10
+     - Host_Listings
+     - basically, anything we suspect has "diminishing returns" as X increases....
+
+
 # Data Wrangling
 
 ### Research Notes
