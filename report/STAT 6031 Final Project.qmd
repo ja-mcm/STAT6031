@@ -1,6 +1,6 @@
 ---
 title: "STAT 6031 Final Project"
-author: "Adriana Gonzalez Sanchez"
+author: "Adriana Gonzalez Sanchez & Jack McMahon"
 format:
   html:
     fig-align: center
@@ -31,22 +31,22 @@ attach(Boston)
 
 The dataset I will be using for this project is called "Boston Housing Dataset" available at the following link: <https://www.kaggle.com/code/prasadperera/the-boston-housing-dataset/notebook>. It comprises 506 observations and 14 covariates concerning housing in the area of Boston, MA. Below is a description of each variable:
 
-| Variable |                              Description                              |
-|:--------:|:---------------------------------------------------------------------:|
-|   crim   |                     Per capita crime rate by town                     |
-|    zn    | Proportion of residential land zoned for lost over 25,000 square feet |
-|  indus   |           Proportion of non-retail business acres per town            |
-|   chas   |  Charles River dummy variable (1 if tract bounds river, 0 otherwise)  |
-|   nox    |          Nitric oxides concentrations (parts per 10 million)          |
-|    rm    |                 Average number of rooms per dwelling                  |
-|   age    |        Proportion of owner-occupied units built prior to 1940         |
-|   dis    |         Weighted distances to five Boston employment centers          |
-|   rad    |               Index of accessibility to radial highways               |
-|   tax    |               Full-value property-tax rate per \$10,000               |
-| ptratio  |                      Pupil-teacher ratio by town                      |
-|  black   |                     Proportion of blacks by town                      |
-|  lstat   |                   \% lower status of the population                   |
-|   medv   |           Median value of owner-occupied homes in \$1000's            |
+| Variable | Description |
+|:------------:|:--------------------------------------------------------:|
+| crim | Per capita crime rate by town |
+| zn | Proportion of residential land zoned for lost over 25,000 square feet |
+| indus | Proportion of non-retail business acres per town |
+| chas | Charles River dummy variable (1 if tract bounds river, 0 otherwise) |
+| nox | Nitric oxides concentrations (parts per 10 million) |
+| rm | Average number of rooms per dwelling |
+| age | Proportion of owner-occupied units built prior to 1940 |
+| dis | Weighted distances to five Boston employment centers |
+| rad | Index of accessibility to radial highways |
+| tax | Full-value property-tax rate per \$10,000 |
+| ptratio | Pupil-teacher ratio by town |
+| black | Proportion of blacks by town |
+| lstat | \% lower status of the population |
+| medv | Median value of owner-occupied homes in \$1000's |
 
 : Table 1: Data Description
 
