@@ -74,11 +74,11 @@ ggplot(bnb_data,aes(log(price))) + geom_histogram()
 
 ### 4) Spatial Analysis
 # -------------------------------------------
-### Add 3 sample destination points from TripAdvisor
-dest_points <- data.table("Rank" = seq(1:3),
-                          "Location" = c("WW2 Museum", "French Quarter", "Frenchman Street"),
-                          "Lat" = c(29.943208928864262, 29.959424483411674, 29.964318181205662),
-                          "Long" = c(-90.07057952646183, -90.06491814669677, -90.05773360204412))
+### Add top 10 destination points from TripAdvisor
+dest_points <- data.table("Rank" = seq(1:10),
+                          "Location" = c("WW2 Museum", "French Quarter", "Frenchman Street", "Garden District", "Jackson Square", "Preservation Hall", "Mardi Gras World", "St. Louis Cemetary", "New Orleans City Park", "St. Louis Cathedral"),
+                          "Lat" = c(29.943208928864262, 29.959424483411674, 29.964318181205662, 29.928845784748955, 29.95756024289618, 29.958610251707462, 29.941144698995455, 29.959608239041174, 29.993454400417903, 29.95815187771942),
+                          "Long" = c(-90.07057952646183, -90.06491814669677, -90.05773360204412, -90.08380077303872,-90.06294615548948, -90.06534875344381, -90.0621223634231, -90.07117833809907, -90.09813780389588, -90.06370009040566))
 
 
 ### Find everything within 1 km of Point #1
@@ -99,6 +99,8 @@ for (i in 1:nrow(dest_points)) {
   close_lat_long <- dest_points[i][close_lat, roll = 0.01, nomatch = NULL][,.(id)]
   
   near_id <- rbind(near_id, close_lat_long)
+  rm(close_lat)
+  rm(close_lat_long)
 }
 
 ### Count up how many points of interest are within 1 km of a given rental
@@ -111,10 +113,14 @@ bnb_data[is.na(near_top_10), near_top_10:=0]
 
 # The more things you are close to, the better (may be non-linear tho)
 
-ggplot(bnb_data,aes(longitude, latitude, colour = near_top_10)) + 
+ggplot(bnb_data,aes(longitude, latitude, colour = log(near_top_10))) + 
   geom_point(cex = 0.3) +
-  coord_cartesian(xlim=c(-90.15,-90.0), ylim = c(29.9, 30.05))
+  coord_cartesian(xlim=c(-90.15,-90.0), ylim = c(29.9, 30.05)) + theme_void()
 
+ggplot(bnb_data[price/beds < 400],aes(longitude, latitude, colour = price)) + 
+  geom_point(cex = 0.1) +
+  coord_cartesian(xlim=c(-90.15,-90.0), ylim = c(29.9, 30.05)) + theme_void() +
+  scale_colour_gradient(low = "grey",high = "blue")
 
 
 ### FUTURE: Remove unusable columns
