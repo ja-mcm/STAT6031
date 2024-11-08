@@ -10,7 +10,8 @@ library(dplyr)
 
 
 
-# Read in sample data
+# Read in data
+# Make sure git repo is pulled onto your desktop, and that your working directory is in "STAT6031" (ie. the main folder)
 bnb_data <- fread("data/Listings_New_Orleans.csv")
 
 
@@ -101,7 +102,3 @@ bnb_data[is.na(near_top_10), near_top_10:=0]
 rm(near_id)
 rm(i)
 
-
-### 4) Fix values within dataset
-# -------------------------------------------
-# Add in from Data Cleaning file
