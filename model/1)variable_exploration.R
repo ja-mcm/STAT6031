@@ -46,12 +46,14 @@ bnb_data <- bnb_data[nchar(price)>1]  # (!!!) drops roughly 1000 records (!!!)
 
 
 ### Find potential duplicates
-# based on repeated lat/long (497)
-potential_dupes <- bnb_data[duplicated(bnb_data, by = c("latitude", "longitude")) == "TRUE"][order(latitude,longitude)]
+# based on repeated lat/long (611)
+bnb_data[, fD := .N > 1, by = c("latitude", "longitude")]
+potential_dupes <- bnb_data[fD==1]
 
-# based on repeated descriptions (199)
-potential_dupes2 <- bnb_data[duplicated(bnb_data, by = c("name")) == "TRUE"][order(latitude,longitude)]
 
+# based on repeated descriptions (290)
+bnb_data[, fD := .N > 1, by = "name"]
+potential_dupes2 <- bnb_data[fD==1]
 
 
 ### 3) Explore
@@ -83,28 +85,35 @@ dest_points <- data.table("Rank" = seq(1:3),
 # Non equi-join (https://www.r-bloggers.com/2021/02/the-unequalled-joy-of-non-equi-joins/)
 
 # Get locations within 1 km of key points (Latitude only)
-setkey(bnb_data, latitude)
-setkey(dest_points, Lat)
-close_lat <- dest_points[bnb_data, roll = 0.01][!is.na(Location)]
+near_id <- data.table()
 
-# Now filter to within 1km - longitude
-setkey(close_lat, longitude)
-setkey(dest_points, Long)
-close_lat_long <- dest_points[close_lat, roll = 0.01][!is.na(Location)][,.(id, 1)]
+for (i in 1:nrow(dest_points)) {
+  setkey(bnb_data, latitude)
+  setkey(dest_points, Lat)
+  close_lat <- dest_points[i][bnb_data, roll = .01, nomatch = NULL]
+  
+  
+  # Now filter to within 1km - longitude
+  setkey(close_lat, longitude)
+  setkey(dest_points, Long)
+  close_lat_long <- dest_points[i][close_lat, roll = 0.01, nomatch = NULL][,.(id)]
+  
+  near_id <- rbind(near_id, close_lat_long)
+}
+
+### Count up how many points of interest are within 1 km of a given rental
+near_id <- as.data.table(near_id)
+near_id <- near_id[,near_top_10 := .N, by=id]
 
 # Add this new derived variable back into the main dataset
-bnb_data <- close_lat_long[bnb_data,on="id"]
-bnb_data[is.na(V2), V2:=0]
+bnb_data <- near_id[bnb_data,on="id"]
+bnb_data[is.na(near_top_10), near_top_10:=0]
 
-setnames(bnb_data, "V2", "near_attraction")
+# The more things you are close to, the better (may be non-linear tho)
 
-### TODO: Count up how many points of interest are within 1 km of a given rental
-# Currently, this is a binary
-
-# close_pts <- dest_points[1][bnb_data, 
-#             .(id, Location ,Lat, Long, latitude, longitude, MAX_LON, MIN_LON),
-#             on=.(Lat>=MIN_LAT, Lat<=MAX_LAT, Long>=MAX_LON), nomatch=0L]
-
+ggplot(bnb_data,aes(longitude, latitude, colour = near_top_10)) + 
+  geom_point(cex = 0.3) +
+  coord_cartesian(xlim=c(-90.15,-90.0), ylim = c(29.9, 30.05))
 
 
 
