@@ -9,3 +9,8 @@
   - These might provide features for predicting the Quality of a lodging (such as: "pool", "stainless steel appliances", etc)
   - There are multiple variations on many items ("Coffee maker" vs "Coffee maker: drip coffee maker" vs "Coffee maker: Keurig coffee machine"), so we'll have to be careful...
   - But, this appears to be a drop-down/list selection - none of the items are misspelled, which would imply user manual input - this is good news!
+- __Pricing__ data has some quirks:
+  - ~1000 records have no pricing - these were removed
+  - There are some suspicious-looking clusters ($999 for a 1 BR?) - what do we do with these?
+- Duplicates also exist
+  - These might be multiple listings in an apartment complex
