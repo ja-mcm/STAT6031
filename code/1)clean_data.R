@@ -54,25 +54,9 @@ bnb_data <- bnb_data[nchar(price)>1]  # (!!!) drops roughly 1000 records (!!!)
 bnb_data <- bnb_data[price != 999]  # These appear to be clear "missing data" issues
 
 
-### Find potential duplicates
-# <<<<< NOTE:>>>>> We looked for duplicates based on 
-# - Name  
-# - Lat/Long 
-# We determined they were not "bad" data - they are real listings, and not the result of a bad JOIN or something else
-# Therefore, we will NOT be removing
 
-# based on repeated lat/long (611)
-#bnb_data[, fD := .N > 1, by = c("latitude", "longitude")]
-#potential_dupes <- bnb_data[fD==1][order(latitude, longitude)]
-# 
-# 
-# based on repeated descriptions (290)
-#bnb_data[, fD := .N > 1, by = "name"]
-#potential_dupes2 <- bnb_data[fD==1]
-
-
-
-### 3) Add NEW variable - top 10 destination points from TripAdvisor
+### 3) Add NEW variable - 
+# Top 10 destination points from TripAdvisor
 # This is meant to model how good the location of the BNB is....
 # Represented as a count - so "6" means that the listing is within 1 km of 6 different attractions
 # Probably want to model this as a log(count), since there are diminishing returns 1->2->3....->6
@@ -84,7 +68,7 @@ dest_points <- data.table("Rank" = seq(1:10),
                           "Long" = c(-90.07057952646183, -90.06491814669677, -90.05773360204412, -90.08380077303872,-90.06294615548948, -90.06534875344381, -90.0621223634231, -90.07117833809907, -90.09813780389588, -90.06370009040566))
 
 
-### Find everything within 1 km of Point #1
+### Find everything within 1 km of each point
 # Non equi-join (https://www.r-bloggers.com/2021/02/the-unequalled-joy-of-non-equi-joins/)
 
 # Get locations within 1 km of key points (Latitude only)
@@ -114,6 +98,8 @@ near_id <- near_id[,near_top_10 := .N, by=id]
 bnb_data <- near_id[bnb_data,on="id"]
 bnb_data[is.na(near_top_10), near_top_10:=0]
 
+rm(near_id)
+rm(i)
 
 
 ### 4) Fix values within dataset

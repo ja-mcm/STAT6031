@@ -12,7 +12,12 @@ library(dplyr)
 
 
 
-### FUTURE: Remove unusable columns
+
+
+
+
+
+### Remove unusable columns
 # -------------------------------------------
 ncol(bnb_data) 
 ## 76 columns

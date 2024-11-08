@@ -33,10 +33,13 @@ ggplot(bnb_data,aes(log(price))) + geom_histogram()
 # The more things you are close to, the better (may be non-linear - consider using log())
 ggplot(bnb_data,aes(longitude, latitude, colour = log(near_top_10))) + 
   geom_point(cex = 0.3) +
-  coord_cartesian(xlim=c(-90.15,-90.0), ylim = c(29.9, 30.05)) + theme_void()
+  coord_cartesian(xlim=c(-90.14,-90.03), ylim = c(29.9, 30.0)) + theme_void() + 
+  labs(title = "New Orleans - Tripadvisor Sites", subtitle = "") 
 
-ggplot(bnb_data[price/beds < 400],aes(longitude, latitude, colour = price)) + 
-  geom_point(cex = 0.1) +
-  coord_cartesian(xlim=c(-90.15,-90.0), ylim = c(29.9, 30.05)) + theme_void() +
-  scale_colour_gradient(low = "grey",high = "blue")
+
+ggplot(bnb_data,aes(longitude, latitude, colour = price, size=price^2)) + 
+  geom_point(cex = 0.3) +
+  coord_cartesian(xlim=c(-90.14,-90.03), ylim = c(29.9, 30.0)) + theme_void() + 
+  scale_colour_gradient(low = "grey80",high = "blue") +
+  labs(title = "New Orleans - AirBnB Prices", subtitle = "") 
 

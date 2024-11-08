@@ -386,12 +386,17 @@ news!</li>
 <li><strong>Pricing</strong> data has some quirks:
 <ul>
 <li>~1000 records have no pricing - these were removed</li>
-<li>There are some suspicious-looking clusters ($999 for a 1 BR?) - what
-do we do with these?</li>
+<li>23 records had price = $999…these seem to be “no data” conditions —
+REMOVED</li>
 </ul></li>
-<li>Duplicates also exist
+<li>We looked for duplicates based on:
 <ul>
-<li>These might be multiple listings in an apartment complex</li>
+<li>Name<br />
+</li>
+<li>Lat/Long</li>
+<li>We determined they were not “bad” data - they are real listings, and
+not the result of a bad JOIN or something else</li>
+<li>Therefore, we will NOT be removing</li>
 </ul></li>
 </ul>
 </div>
