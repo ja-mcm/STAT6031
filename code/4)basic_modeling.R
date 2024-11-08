@@ -10,7 +10,20 @@ set.seed(111)
 
 
 
+#### SOME BOILERPLATE CODE TO COMPARE OLS AGAINST ROBUST REGRESSION
+# Get rid of high dimensional dummy variables, just for convenience
+final_data[,c("host_location", "host_response_rate", "host_acceptance_rate", "latitude","longitude"):=NULL]
 
+lm_1 <- lm(log(price)~.,data=final_data)
+lm_1_robust <- rlm(log(price)~.,data=final_data)
+
+summary(lm_1)
+summary(lm_1_robust)
+
+cbind(lm_1$fitted.values |> exp(), lm_1_robust$fitted.values |> exp(), lm_1$model[1] |> exp()) |> head(100)
+
+
+# Robust regression has lower RMSE (.3922 vs .4476)
 
 
 
