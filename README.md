@@ -15,8 +15,15 @@ TBD
 - Cross validation
 - Pre-processing
 
-
 ### Possible supplemental data:
   - Lat-long of top 10 TripAdvisor destinations in the area ("# within walking distance")
   - Crime rates ("Do I really want to stay in this area?")
-  - Local rental rates ("How expensive is an equivalent apartment in that area?")
+  - Local rental rates ("How expensive is an equivalent apartment in that area?")'
+
+# TODO 
+1) Clean out duplicates/bad data
+2) Decide which variables to keep/model
+3) EDA
+4) Model selection
+5) Validation
+6) Report writing
