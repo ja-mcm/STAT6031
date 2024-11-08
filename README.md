@@ -1,7 +1,7 @@
 # STAT6031
 
 # Project Goal:
-Accurately predict the price of a given AirBNB rental in __<<< CITY NAME >>>__, given the metadata about each property.
+Accurately predict the price of a given AirBNB rental in __NEW ORLEANS__, given the metadata about each property.
 
 # 
 
@@ -16,14 +16,14 @@ TBD
 - Pre-processing
 
 ### Possible supplemental data:
-  - Lat-long of top 10 TripAdvisor destinations in the area ("# within walking distance")
+  - Lat-long of top 10 TripAdvisor destinations in the area ("# within walking distance") --- DONE
   - Crime rates ("Do I really want to stay in this area?")
   - Local rental rates ("How expensive is an equivalent apartment in that area?")'
 
 # TODO 
-1) Clean out duplicates/bad data
-2) Decide which variables to keep/model
-3) EDA
+1) Clean out duplicates/bad data (JACK)
+2) Decide which variables to keep/model (ADRIANA)
+3) EDA 
 4) Model selection
 5) Validation
 6) Report writing

@@ -1,6 +1,14 @@
 library(data.table)
 library(jsonlite)
 library(ggplot2)
+library(dplyr)
+
+#### GOALS OF FILE ######
+# 1) Get rid of "bad" rows of data (which will screw up our model)
+# 2) Get JSON data into a usable format 
+#########################
+
+
 
 # Read in sample data
 bnb_data <- fread("data/Listings_New_Orleans.csv")
@@ -63,23 +71,11 @@ bnb_data <- bnb_data[price != 999]  # These appear to be clear "missing data" is
 #potential_dupes2 <- bnb_data[fD==1]
 
 
-### 3) Explore
-# -------------------------------------------
-# Inspect distribution of prices
-# Very right-skewed
-ggplot(bnb_data,aes(price)) + geom_histogram()
 
-# Log transform isnt perfect either...
-ggplot(bnb_data,aes(log(price))) + geom_histogram()
-
-
-# Note the anomalous entries @ $999 and $500 price points. What's up with these?
-# We'll need to identify why so that our price prediction accuracy doesn't get tanked.
-
-
-
-
-### 4) Spatial Analysis
+### 3) Add NEW variable - top 10 destination points from TripAdvisor
+# This is meant to model how good the location of the BNB is....
+# Represented as a count - so "6" means that the listing is within 1 km of 6 different attractions
+# Probably want to model this as a log(count), since there are diminishing returns 1->2->3....->6
 # -------------------------------------------
 ### Add top 10 destination points from TripAdvisor
 dest_points <- data.table("Rank" = seq(1:10),
@@ -118,37 +114,8 @@ near_id <- near_id[,near_top_10 := .N, by=id]
 bnb_data <- near_id[bnb_data,on="id"]
 bnb_data[is.na(near_top_10), near_top_10:=0]
 
-# The more things you are close to, the better (may be non-linear - consider using log())
-ggplot(bnb_data,aes(longitude, latitude, colour = log(near_top_10))) + 
-  geom_point(cex = 0.3) +
-  coord_cartesian(xlim=c(-90.15,-90.0), ylim = c(29.9, 30.05)) + theme_void()
-
-ggplot(bnb_data[price/beds < 400],aes(longitude, latitude, colour = price)) + 
-  geom_point(cex = 0.1) +
-  coord_cartesian(xlim=c(-90.15,-90.0), ylim = c(29.9, 30.05)) + theme_void() +
-  scale_colour_gradient(low = "grey",high = "blue")
 
 
-### FUTURE: Remove unusable columns
+### 4) Fix values within dataset
 # -------------------------------------------
-ncol(bnb_data) 
-## 76 columns
-
-# Drop all URLs - we don't plan on using these....
-bnb_data[,grep("^.*url$", colnames(bnb_data)):= NULL]
-
-# Drop all the redundant max/min nights variables - keep only the average
-bnb_data[,grep("^.*nights$", colnames(bnb_data)):= NULL]
-
-# Drop columns with only NAs
-bnb_data <- bnb_data[, .SD, .SDcols = \(x) !all(is.na(x))]
-
-# Drop any invariant columns (ie. only 1 value)
-bnb_data <- bnb_data[, !sapply(bnb_data, FUN = function(x) length(unique(x))==1), with = FALSE]
-
-# Drop other misc columns that have no clear use
-bnb_data[,c("host_verifications", "neighbourhood"):=NULL]
-
-
-ncol(bnb_data)
-## 58 columns
+# Add in from Data Cleaning file

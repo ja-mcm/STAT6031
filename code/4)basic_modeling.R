@@ -5,8 +5,16 @@ library(caret)
 set.seed(111)
 
 
-lm_1 <- lm(price ~ beds + bathrooms + room_type + near_top_10 + review_scores_rating, bnb_data[price/beds<400])
-summary(lm_1)
+
+
+
+
+
+
+
+
+
+#### SOME BOILERPLATE CODE FOR USING CARET / CROSS-VALIDATION (if we decide to go this way)
 
 ### Set up train/test split
 tt_split <- createDataPartition(
