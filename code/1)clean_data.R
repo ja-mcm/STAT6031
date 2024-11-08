@@ -21,8 +21,10 @@ bnb_data <- raw_data
 # Remove listings with no price data
 bnb_data <- bnb_data |> mutate(price = as.numeric(gsub("[$,]", "", as.character(price))))
 bnb_data <- bnb_data[nchar(price)>1]  # (!!!) drops roughly 1000 records (!!!)
-bnb_data <- bnb_data[price != 999]  # These appear to be clear "missing data" issues
 
+# Note: there are some seriously CRAZY prices - these are real listings but they make no sense
+bnb_data[order(-price),.(id, name, beds, bathrooms, accommodates, price)]
+# - $28,000 per night for a 
 
 
 ### 2) Add NEW variable - 

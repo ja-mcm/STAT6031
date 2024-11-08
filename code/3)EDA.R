@@ -38,7 +38,7 @@ ggplot(final_data,aes(longitude, latitude, colour = log(near_top_10))) +
   theme(legend.position="none", plot.title = element_text(size=18))
 
 
-ggplot(final_data,aes(longitude, latitude, colour = price, size=price^2)) + 
+ggplot(final_data[beds < 5 & price < 2000],aes(longitude, latitude, colour = log(price), size=price)) + 
   geom_point(cex = 0.3) +
   coord_cartesian(xlim=c(-90.14,-90.03), ylim = c(29.9, 30.0)) + theme_void() + 
   scale_colour_gradient(low = "grey80",high = "blue") +

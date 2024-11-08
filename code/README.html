@@ -399,11 +399,17 @@ machine”), so we’ll have to be careful…</li>
 items are misspelled, which would imply user manual input - this is good
 news!</li>
 </ul></li>
-<li><strong>Pricing</strong> data has some quirks:
+<li><strong>Pricing</strong> data has some serious quirks:
 <ul>
 <li>~1000 records have no pricing - these were removed</li>
-<li>23 records had price = $999…these seem to be “no data” conditions —
-REMOVED</li>
+<li>There are some extreme outliers, on both ends
+<ul>
+<li>$28,000 / night for a whole hotel</li>
+<li>$10,000 / night for a 1 bd</li>
+<li>$20 / night for a room in a Dorm</li>
+<li>$21 / night for a room in a hostel</li>
+<li>etc</li>
+</ul></li>
 </ul></li>
 <li>We looked for duplicates based on:
 <ul>
@@ -415,6 +421,11 @@ not the result of a bad JOIN or something else</li>
 <li>Therefore, we will NOT be removing</li>
 </ul></li>
 </ul>
+<p>–&gt; <strong>TODO</strong> - Figure out how we can mitigate extreme
+PRICE values</p>
+<pre><code>- OPTION 1: Find them given the variables we have (such as minimum nights) 
+- OPTION 2: discuss options for robust regression, to better handle these outliers
+- OPTION 3: remove (not a big fan of this, since they are true data points, and we may need to predict an outlier)</code></pre>
 </div>
 </div>
 
