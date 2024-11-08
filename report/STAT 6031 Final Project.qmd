@@ -1,0 +1,591 @@
+---
+title: "STAT 6031 Final Project"
+author: "Adriana Gonzalez Sanchez"
+format:
+  html:
+    fig-align: center
+    code-fold: true
+    results: hide
+    toc: true
+    embed-resources: true
+editor: visual
+---
+
+```{r, message = FALSE, warning = FALSE}
+
+# Load necessary libraries
+
+library(dplyr)
+library(ggplot2)
+library(MASS)
+library(car)
+
+# Load dataset 
+
+data(Boston)
+attach(Boston)
+
+```
+
+## Section 1 -- Exploratory Data Analysis
+
+The dataset I will be using for this project is called "Boston Housing Dataset" available at the following link: <https://www.kaggle.com/code/prasadperera/the-boston-housing-dataset/notebook>. It comprises 506 observations and 14 covariates concerning housing in the area of Boston, MA. Below is a description of each variable:
+
+| Variable |                              Description                              |
+|:--------:|:---------------------------------------------------------------------:|
+|   crim   |                     Per capita crime rate by town                     |
+|    zn    | Proportion of residential land zoned for lost over 25,000 square feet |
+|  indus   |           Proportion of non-retail business acres per town            |
+|   chas   |  Charles River dummy variable (1 if tract bounds river, 0 otherwise)  |
+|   nox    |          Nitric oxides concentrations (parts per 10 million)          |
+|    rm    |                 Average number of rooms per dwelling                  |
+|   age    |        Proportion of owner-occupied units built prior to 1940         |
+|   dis    |         Weighted distances to five Boston employment centers          |
+|   rad    |               Index of accessibility to radial highways               |
+|   tax    |               Full-value property-tax rate per \$10,000               |
+| ptratio  |                      Pupil-teacher ratio by town                      |
+|  black   |                     Proportion of blacks by town                      |
+|  lstat   |                   \% lower status of the population                   |
+|   medv   |           Median value of owner-occupied homes in \$1000's            |
+
+: Table 1: Data Description
+
+To begin our analysis, we will start with exploratory data analysis. For each covariate, we will examine key statistics, including the mean, median, standard deviation, minimum, maximum, and the number of missing values. The table below summarizes these findings:
+
+```{r, message = FALSE}
+
+## Sample size
+n <- nrow(Boston)
+p <- ncol(Boston)
+
+statistics_summary <- summary(Boston)
+
+sd_crim <- sd(crim)
+sd_zn <- sd(zn)
+sd_indus <- sd(indus)
+sd_chas <- sd(chas)
+sd_nox <- sd(nox)
+sd_rm <- sd(rm)
+sd_age <- sd(age)
+sd_dis <- sd(dis)
+sd_rad <- sd(rad)
+sd_tax <- sd(tax)
+sd_ptratio <- sd(ptratio)
+sd_black <- sd(black)
+sd_lstat <- sd(lstat)
+sd_medv <- sd(medv)
+
+missing_values <- colSums(is.na(Boston))
+```
+
+| Variable |  Mean  | Median | St. Deviation |    (Min, Max)    | Missing Values |
+|:--------:|:------:|:------:|:-------------:|:----------------:|:--------------:|
+|   crim   |  3.61  |  0.26  |     8.60      |  (0.00, 88.98)   |       0        |
+|    zn    | 11.36  |  0.00  |     23.32     |  (0.00,100.00)   |       0        |
+|  indus   | 11.14  |  9.69  |     6.86      |  (0.46, 27.74)   |       0        |
+|   chas   |  0.07  |  0.00  |     0.25      |   (0.00, 1.00)   |       0        |
+|   nox    |  0.55  |  0.54  |     0.12      |   (0.38, 0.87)   |       0        |
+|    rm    |  6.28  |  6.21  |     0.70      |   (3.56, 8.78)   |       0        |
+|   age    | 68.57  | 77.50  |     28.15     |  (2.90, 100.00)  |       0        |
+|   dis    |  3.79  |  3.21  |     2.11      |  (1.13, 12.13)   |       0        |
+|   rad    |  9.55  |  5.00  |     8.71      |  (1.00, 24.00)   |       0        |
+|   tax    | 408.20 | 330.00 |    168.54     | (187.00, 711.00) |       0        |
+| ptratio  | 18.46  | 19.05  |     2.16      |  (12.60, 22.00)  |       0        |
+|  black   | 356.67 | 391.44 |     91.29     |  (0.32, 396.90)  |       0        |
+|  lstat   | 12.65  | 11.36  |     7.14      |  (1.73, 37.97)   |       0        |
+|   medv   | 22.53  | 21.20  |     9.20      |  (5.00, 50.00)   |       0        |
+
+: Summary of Statistics
+
+When reviewing the summary statistics, it is important to note that there are no missing values, which is ideal. Additionally, some covariates show skewness, as evidenced by the mean and median values not being close to each other. Below, you can view the density plots and box-plots for each covariate:
+
+```{r}
+
+par(mfrow = c(2,2))
+
+plot(density(Boston$crim), 
+     main = "Crim Distribution",
+     xlab = "crim",
+     col = "blue")
+
+boxplot((Boston$crim),
+               main = "Crim Distribution")
+
+plot(density(Boston$zn),
+      main = "Zn Distribution",
+     xlab = "zn",
+     col = "blue")
+
+boxplot((Boston$zn),
+        main = "Zn Distribution")
+
+plot(density(Boston$indus),
+      main = "Indus Distribution",
+     xlab = "indus",
+     col = "blue")
+
+boxplot((Boston$indus),
+        main = "Indus Distribution")
+
+plot(density(Boston$chas),
+      main = "Chas Distribution",
+     xlab = "chas",
+     col = "blue")
+
+boxplot((Boston$chas),
+        main = "Chas Distribution")
+
+plot(density(Boston$nox),
+      main = "Nox Distribution",
+     xlab = "nox",
+     col = "blue")
+
+boxplot((Boston$nox),
+        main = "Nox Distribution")
+
+plot(density(Boston$rm),
+      main = "Rm Distribution",
+     xlab = "rm",
+     col = "blue")
+
+boxplot((Boston$rm),
+    main = "Rm Distribution")
+
+plot(density(Boston$age),
+      main = "Age Distribution",
+     xlab = "age",
+     col = "blue")
+
+boxplot((Boston$age),
+         main = "Age Distribution")
+
+plot(density(Boston$dis),
+      main = "Dis Distribution",
+     xlab = "dis",
+     col = "blue")
+
+boxplot((Boston$dis),
+        main = "Dis Distribution")
+
+plot(density(Boston$rad),
+      main = "Rad Distribution",
+     xlab = "rad",
+     col = "blue")
+
+boxplot((Boston$rad),
+        main = "Rad Distribution")
+
+plot(density(Boston$tax),
+      main = "Tax Distribution",
+     xlab = "tax",
+     col = "blue")
+
+boxplot((Boston$tax),
+         main = "Tax Distribution")
+
+plot(density(Boston$ptratio),
+      main = "Ptratio Distriibution",
+     xlab = "ptratio",
+     col = "blue")
+
+boxplot((Boston$ptratio),
+        main = "Ptratio Distribution")
+
+plot(density(Boston$black),
+      main = "Black Distribution",
+     xlab = "black",
+     col = "blue")
+
+boxplot((Boston$black),
+        main = "Black Distribution")
+
+plot(density(Boston$lstat),
+      main = "Lstat Distribution",
+     xlab = "lstat",
+     col = "blue")
+
+boxplot((Boston$lstat),
+        main = "Lstat Distribution")
+
+plot(density(Boston$medv),
+      main = "Medv Distribution",
+     xlab = "medv",
+     col = "blue")
+
+boxplot((Boston$medv),
+        main = "Medv Distribution")
+```
+
+When examining these plots, we can classify the covariates based on their skewness as follows:
+
+| Right Skewed | Left Skewed | Multimodal | \~ Symmetric | Other   |
+|--------------|-------------|------------|--------------|---------|
+| crim         | black       | indus      | rm           | nox     |
+| zn           |             | rad        |              | age     |
+| chas         |             | tax        |              | mdev    |
+| dis          |             |            |              | ptratio |
+| lstat        |             |            |              |         |
+
+: Distribution of Covariates
+
+Additionally, we identify outliers in the following covariates: crim, zn, chas, rm, dis, ptratio, black, lstat, and medv.
+
+```{r, message = FALSE}
+
+# Function to identify outliers using IQR
+identify_outliers_iqr <- function(data) 
+  {
+    outliers <- lapply(data, function(x) 
+      {
+        Q1 <- quantile(x, 0.25)
+        Q3 <- quantile(x, 0.75)
+        IQR <- Q3 - Q1
+        lower_bound <- Q1 - 1.5 * IQR
+        upper_bound <- Q3 + 1.5 * IQR
+        return(which(x < lower_bound | x > upper_bound))
+      })
+    return(outliers)
+  }
+
+# Identify outliers
+outliers_iqr <- identify_outliers_iqr(Boston)
+
+```
+
+We should also be interested in the pairwise relationships between the variable we want to predict and the covariates in the dataset. In our case, the varaible we want to predict is "medv". To observe the relationship between "medv" and the rest of the covariates more closely, look at the plots below:
+
+::: panel-tabset
+## Correlation Plot 1
+
+```{r}
+library(dplyr)
+
+Boston <- as_tibble(Boston)
+
+Boston_1 <- Boston %>%
+  dplyr::select(medv, crim, zn, indus, chas, nox, rm, age)
+
+pairs(medv ~ ., data = Boston_1, main = "Scatterplot Matrix")
+```
+
+## Correlation Plot 2
+
+```{r}
+
+Boston_2 <- Boston %>%
+  dplyr::select(medv, dis, rad, tax, ptratio, black, lstat)
+
+pairs(medv ~ ., data = Boston_2, main = "Scatterplot Matrix")
+```
+
+## Heat Map of Correlation
+
+```{r}
+
+library(ggplot2)
+library(reshape2)
+
+# Example dataset: replace this with your actual dataset
+set.seed(123)
+
+#Boston <- Boston %>% dplyr::select(-medv_boxcox)
+
+# Calculate the correlation matrix
+correlation_matrix <- cor(Boston)
+
+# Melt the correlation matrix for ggplot2
+cor_melted <- melt(correlation_matrix)
+
+# Create the heatmap
+ggplot(cor_melted, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +  # Add white borders to the squares
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1, 1), 
+                       name = "Correlation") +  # Gradient fill for correlation values
+  geom_text(aes(label = round(value, 2)), color = "black") +  # Add correlation values in squares
+  theme_minimal() +  # Use a minimal theme
+  labs(title = "Correlation Matrix Heatmap", 
+       x = "", 
+       y = "") +  # Remove axis labels
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Angle x-axis labels
+```
+:::
+
+By looking at the correlation plots, we can observe that there is a strong positive correlation between medv and tax and a strong negative correlation between medv and lstat.
+
+Additionally, rad and tax have a a correlation of 0.91, so they are strongly correlated to each other. When doing model selection, we should not select both of them together for trainig the model due to a variance inflation, confounding effects and multicollinearity. The same applies to dis and age, with a correlation of -0.75 and to nox and age, with a correlation of -0.77.
+
+# Section 2 - Regression
+
+After completing the exploratory data analysis, the next step is to fit a simple linear regression model to our data. While we could choose any continuous variable as the response, the primary goal of many analyses on this dataset is to predict housing prices. Therefore, we will use "medv" (median home value) as the response variable and fit the following model:
+
+$$\text{medv} \text{~} \text{crim} + \text{zn} + \text{indus} + \text{chas} + \text{nox} + \text{rm} + \text{age} + \text{dis} + \text{rad} + \text{rad} + \text{ptratio} + \text{lstat} + \text{black}
+$$
+
+The goal of fitting any model to our data is to draw meaningful conclusions from our analysis. However, to do this effectively, we must ensure that the model is correctly specified and that there are no underlying patterns we do not want. One way to check the model's validity is by examining the residual plots shown below:
+
+```{r}
+
+
+# Fit a linear regression model with all the predictors
+full_model <- lm(medv ~ crim + zn + indus + chas + nox + rm + age + dis + rad  + ptratio + black + lstat, data = Boston)
+
+par(mfrow = c(2, 2))
+plot(full_model)
+
+vif_values <- vif(full_model)
+
+```
+
+From the residuals vs. fitted values plot above, we can see that the residuals have a mean close to zero, which is expected. However, the QQ-plot indicates the presence of heavy tails, suggesting that the assumption of normality might not be fully met.
+
+To address the issue of heavy tails, common transformations include the log transformation and the Box-Cox transformation:
+
+::: panel-tabset
+## Log-Transformation
+
+```{r}
+
+log_model <- lm(log(medv) ~ ., data = Boston)
+
+par(mfrow = c(2, 2))
+
+plot(log_model)
+```
+
+## Box-Cox Transformation
+
+```{r}
+
+boxcox_results <- boxcox(full_model, lambda = seq(-3,3, length = 31), interp=F)
+
+optimal_lambda <- boxcox_results$x[which.max(boxcox_results$y)]
+
+# Transform the response variable using the optimal lambda
+if (optimal_lambda == 0) 
+  {
+    Boston$medv_boxcox <- log(Boston$medv)
+  } else {
+    Boston$medv_boxcox <- (Boston$medv^optimal_lambda - 1) / optimal_lambda
+  }
+
+# Fit the model with the transformed response variable
+boxcox_model <- lm(medv_boxcox ~ ., data = Boston)
+boxcox_model_summary <- summary(boxcox_model)
+
+par(mfrow = c(2,2))
+plot(boxcox_model)
+```
+:::
+
+By examining the residuals of both transformations, we can observe that both QQ-plots have heavy tails, suggesting that the assumptions might not be met. The next step is to consider a polynomial model:
+
+```{r}
+
+polynomial_model <- lm(medv ~ crim + zn + indus + chas + nox + dis + rm +
+                         age + rad + tax + ptratio + black +lstat + rm^2 + lstat^2,
+                       data = Boston)
+
+par(mfrow = c(2,2))
+plot(polynomial_model)
+```
+
+By looking at the plot above, we can observe that there are still heavy tails on the QQ plot of the resiudlas, therefore, we can keep looking for a better model.
+
+The next option to consider are Generalized Additive Models (GAMs), and the analysis is shown below:
+
+```{r}
+
+library(mgcv)   # for GAM modeling
+
+# Fit the GAM model treating 'chas' as a linear predictor
+gam_model <- gam(medv ~ s(crim, k = 5) +  s(zn, k = 3) + s(indus, k = 5) + chas + 
+                   s(nox, k = 5) + s(dis, k = 5) + s(rm, k = 5) + s(age, k = 5) + 
+                   s(rad, k = 5) + s(tax, k = 5) + s(ptratio, k = 5) + 
+                   s(black, k = 5) + s(lstat, k = 5), data = Boston)
+
+# Extract residuals
+residuals_gam <- residuals(gam_model)
+fitted_values <- fitted(gam_model)
+
+model_matrix <- model.matrix(gam_model)  # Get the model matrix
+n <- nrow(model_matrix)                   # Number of observations
+p <- ncol(model_matrix) 
+
+standardized_residuals <- residuals_gam / sd(residuals_gam)
+hat_values <- diag(model_matrix %*% solve(t(model_matrix) %*% model_matrix) %*% t(model_matrix))
+
+# Histogram of residuals
+hist(residuals_gam, 
+     main = "Histogram of Residuals", 
+     xlab = "Residuals", 
+     breaks = 30, 
+     col = "lightblue")
+
+# Check diagnostics
+par(mfrow = c(2, 2))
+
+# Plot residuals vs fitted values
+plot(fitted(gam_model), residuals_gam, 
+     xlab = "Fitted Values", 
+     ylab = "Residuals", 
+     main = "Residuals vs Fitted Values")
+abline(h = 0, col = "red", lty = 2)  # Add a horizontal line at 0
+
+# Create Q-Q plot
+qqnorm(residuals_gam, main = "Q-Q Plot of Residuals")
+qqline(residuals_gam, col = "red")  # Add a Q-Q line
+
+# Create Scale-Location plot
+plot(fitted_values, standardized_residuals, 
+     xlab = "Fitted Values", 
+     ylab = "Standardized Residuals", 
+     main = "Scale-Location Plot")
+abline(h = 0, col = "red", lty = 2)
+
+# Create Residuals vs. Leverage plot
+plot(hat_values, standardized_residuals, 
+     xlab = "Leverage", 
+     ylab = "Standardized Residuals", 
+     main = "Residuals vs. Leverage Plot")
+abline(h = 0, col = "red", lty = 2)
+```
+
+By looking a the plot above, we can see that all residuals behave better, so we can cocnlude that the normality assumtions are met in this model.
+
+Now, let's identify the best model using stepwise selection. After running the code in R, the output reveals that the optimal model is:
+
+```{r}
+
+
+
+# Load libraries
+library(mgcv)
+library(boot)
+
+# Set a seed for reproducibility
+set.seed(123)
+
+# Create a custom function to fit the GAM model
+fit_gam <- function(data, indices) {
+  # Create training set
+  train_data <- data[indices, ]
+  
+  # Fit the GAM model
+  gam_model <- gam(medv ~ s(crim, k = 5) + s(zn, k = 3) + 
+                   s(indus, k = 5) + chas + 
+                   s(nox, k = 5) + s(dis, k = 5) + 
+                   s(rm, k = 5) + s(age, k = 5) + 
+                   s(rad, k = 5) + s(tax, k = 5) + 
+                   s(ptratio, k = 5) + 
+                   s(black, k = 5) + s(lstat, k = 5), 
+                   data = train_data)
+  
+  return(gam_model)
+}
+
+# Create the k-fold cross-validation indices
+k_folds <- 5
+n <- nrow(Boston)
+folds <- cut(seq(1, n), breaks = k_folds, labels = FALSE)
+
+# Store results for each fold
+cv_results <- vector("list", k_folds)
+
+# Perform k-fold cross-validation
+for (i in 1:k_folds) {
+  # Split data into training and test sets
+  test_indices <- which(folds == i, arr.ind = TRUE)
+  train_indices <- which(folds != i, arr.ind = TRUE)
+  
+  # Fit the model on the training set
+  model <- fit_gam(Boston, train_indices)
+  
+  # Predict on the test set
+  test_data <- Boston[test_indices, ]
+  predictions <- predict(model, newdata = test_data)
+  
+  # Calculate RMSE for this fold
+  rmse <- sqrt(mean((test_data$medv - predictions)^2))
+  
+  # Store the RMSE result
+  cv_results[[i]] <- rmse
+}
+
+# Calculate and print the average RMSE across folds
+average_rmse <- mean(unlist(cv_results))
+cat("Average RMSE across", k_folds, "folds:", average_rmse, "\n")
+
+
+```
+
+```{r}
+
+library(mgcv)
+
+# Split data into training and testing
+sample_index <- sample(nrow(Boston), nrow(Boston)*0.80, replace = FALSE) 
+Boston.train <- Boston[sample_index,] 
+Boston.test <- Boston[-sample_index,] 
+
+```
+
+```{r}
+
+# In-sample fit (prediction), training data
+yhat_train <- predict(object = full_model, newdata = Boston.train)
+
+# In-sample average sum squared error (ASE)
+ase_insample <- mean(full_model$residuals^2)
+
+# In-sample mean squared error (MSE)
+MSE_insample <- sum(full_model$residuals^2) / 390
+summary(full_model)$sigma^2
+
+# Make predictions on testing data
+yhat_test <- predict(full_model, newdata = Boston.test)
+
+# Out-of-sample MSPE
+MSPE_outsample <- mean((Boston.test$medv - yhat_test)^2)
+
+# Stepwise variable selection with BIC
+null_model <- lm(medv ~ 1, data = Boston.train)
+full_model <- lm(medv ~ ., data = Boston.train)
+
+model_step_bic <- step(null_model, scope = list(lower = null_model,
+                                                upper = full_model),
+                       k = log(nrow(Boston.train)), trace = F)
+
+step_bic_model_summary <- summary(model_step_bic)
+
+### Report the corresponding in-sample model MSE and in-sample model ASE and save it as "MSE.stepBIC" and "ASE.stepBIC".
+
+# In-sample fit (prediction), training data
+yhat_BIC <- predict(object = model_step_bic, newdata = Boston.train)
+
+# In-sample average sum squared error (ASE)
+ASE.stepBIC <- mean(model_step_bic$residuals^2)
+
+# In-sample mean squared error (MSE)
+
+MSE.stepBIC <- summary(model_step_bic)$sigma^2
+sum(model_step_bic$residuals^2) / 396 # (n-6-1)
+
+# Make predictions on testing data
+yhat_test_BIC <- predict(model_step_bic, newdata = Boston.test)
+
+# Out-of-sample MSPE
+MSPE.stepBIC <- mean((Boston.test$medv - yhat_test_BIC)^2)
+
+# Plot model
+par(mfrow = c(2, 2))
+plot(model_step_bic)
+```
+
+MSPE, PREDICTION INTERVAL, 95% PREDICTION INTERVAL HAVE THE MOST TESTING POINTS ON THEM (CVG)
+
+CHECK THE UNCERTAINTY FOR EACH OF THEM
+
+cvg coverage
+
+mspe AND CVG
