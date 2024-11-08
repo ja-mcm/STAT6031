@@ -12,51 +12,20 @@ library(dplyr)
 
 # Read in data
 # Make sure git repo is pulled onto your desktop, and that your working directory is in "STAT6031" (ie. the main folder)
-bnb_data <- fread("data/Listings_New_Orleans.csv")
+raw_data <- fread("data/Listings_New_Orleans.csv")
+bnb_data <- raw_data
 
 
-### 1) Parse Amenities JSON
-# -------------------------------
-# Fix up quotes, so we can parse this JSON
-bnb_data[,amenities:=gsub('""','"' , amenities, fixed=TRUE)]
-bnb_data[,amenities_list:=lapply(bnb_data$amenities, function(x) {parse_json(x)})]
-
-# The parsed JSON now lives in a list object, which holds all the individual features for each property
-bnb_data$amenities_list[1:3]
-
-# Collapse list items into a table, for easier review of what these look like...
-all_amenities <- unlist(bnb_data[, amenities_list])  |> data.table()
-all_amenities <- all_amenities[,.N,by=V1][order(-N)]
-
-
-# over 2,000 possible items - we'll have to reduce this....
-
-# 1) Can we combine similar entries?
-# Coffee has 38 distinct entries...
-all_amenities[V1 %like% "Coffee"]
-
-# 2) Ignore "sparse" features
-# Of the 2000+ amenities, only 165 apply to at least 1% of the listings (ie. count of 70 or more)
-
-# 3) Can we identify "premium" features, and disregard the rest?
-  # Pool
-  # Stainless steel appliances
-  # etc
-# Which amenities are strongly associated with higher prices?
-
-
-
-
-### 2) Find bad data
+### 1) Find bad data
 # -----------------------------------------
 # Remove listings with no price data
-bnb_data[,price:=as.numeric(substring(price,2))] ### Note: drops decimal places, but prices never have cent component
+bnb_data <- bnb_data |> mutate(price = as.numeric(gsub("[$,]", "", as.character(price))))
 bnb_data <- bnb_data[nchar(price)>1]  # (!!!) drops roughly 1000 records (!!!)
 bnb_data <- bnb_data[price != 999]  # These appear to be clear "missing data" issues
 
 
 
-### 3) Add NEW variable - 
+### 2) Add NEW variable - 
 # Top 10 destination points from TripAdvisor
 # This is meant to model how good the location of the BNB is....
 # Represented as a count - so "6" means that the listing is within 1 km of 6 different attractions
@@ -97,8 +66,38 @@ near_id <- near_id[,near_top_10 := .N, by=id]
 
 # Add this new derived variable back into the main dataset
 bnb_data <- near_id[bnb_data,on="id"]
-bnb_data[is.na(near_top_10), near_top_10:=0]
+bnb_data <- bnb_data[is.na(near_top_10), near_top_10:=0] |> unique()
 
 rm(near_id)
 rm(i)
+
+
+### 3) Parse Amenities JSON
+# -------------------------------
+# Fix up quotes, so we can parse this JSON
+bnb_data[,amenities:=gsub('""','"' , amenities, fixed=TRUE)]
+bnb_data[,amenities_list:=lapply(bnb_data$amenities, function(x) {parse_json(x)})]
+
+# The parsed JSON now lives in a list object, which holds all the individual features for each property
+bnb_data$amenities_list[1:3]
+
+# Collapse list items into a table, for easier review of what these look like...
+all_amenities <- unlist(bnb_data[, amenities_list])  |> data.table()
+all_amenities <- all_amenities[,.N,by=V1][order(-N)]
+
+
+# over 2,000 possible items - we'll have to reduce this....
+
+# 1) Can we combine similar entries?
+# Coffee has 38 distinct entries...
+all_amenities[V1 %like% "Coffee"]
+
+# 2) Ignore "sparse" features
+# Of the 2000+ amenities, only 165 apply to at least 1% of the listings (ie. count of 70 or more)
+
+# 3) Can we identify "premium" features, and disregard the rest?
+# Pool
+# Stainless steel appliances
+# etc
+# Which amenities are strongly associated with higher prices?
 
