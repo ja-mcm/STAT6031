@@ -43,17 +43,24 @@ all_amenities[V1 %like% "Coffee"]
 # Remove listings with no price data
 bnb_data[,price:=as.numeric(substring(price,2))] ### Note: drops decimal places, but prices never have cent component
 bnb_data <- bnb_data[nchar(price)>1]  # (!!!) drops roughly 1000 records (!!!)
+bnb_data <- bnb_data[price != 999]  # These appear to be clear "missing data" issues
 
 
 ### Find potential duplicates
+# <<<<< NOTE:>>>>> We looked for duplicates based on 
+# - Name  
+# - Lat/Long 
+# We determined they were not "bad" data - they are real listings, and not the result of a bad JOIN or something else
+# Therefore, we will NOT be removing
+
 # based on repeated lat/long (611)
-bnb_data[, fD := .N > 1, by = c("latitude", "longitude")]
-potential_dupes <- bnb_data[fD==1]
-
-
+#bnb_data[, fD := .N > 1, by = c("latitude", "longitude")]
+#potential_dupes <- bnb_data[fD==1][order(latitude, longitude)]
+# 
+# 
 # based on repeated descriptions (290)
-bnb_data[, fD := .N > 1, by = "name"]
-potential_dupes2 <- bnb_data[fD==1]
+#bnb_data[, fD := .N > 1, by = "name"]
+#potential_dupes2 <- bnb_data[fD==1]
 
 
 ### 3) Explore
@@ -111,8 +118,7 @@ near_id <- near_id[,near_top_10 := .N, by=id]
 bnb_data <- near_id[bnb_data,on="id"]
 bnb_data[is.na(near_top_10), near_top_10:=0]
 
-# The more things you are close to, the better (may be non-linear tho)
-
+# The more things you are close to, the better (may be non-linear - consider using log())
 ggplot(bnb_data,aes(longitude, latitude, colour = log(near_top_10))) + 
   geom_point(cex = 0.3) +
   coord_cartesian(xlim=c(-90.15,-90.0), ylim = c(29.9, 30.05)) + theme_void()

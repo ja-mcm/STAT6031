@@ -5,7 +5,7 @@ library(caret)
 set.seed(111)
 
 
-lm_1 <- lm(price ~ beds + bathrooms + near_top_10 + review_scores_rating, bnb_data)
+lm_1 <- lm(price ~ beds + bathrooms + room_type + near_top_10 + review_scores_rating, bnb_data[price/beds<400])
 summary(lm_1)
 
 ### Set up train/test split
