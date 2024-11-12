@@ -74,6 +74,8 @@ filtered_data <- filtered_data %>%
 filtered_data <- filtered_data %>%
   mutate(host_location = if_else(host_location == "New Orleans, LA", 1, 0))
 
+final_data <- filtered_data
+
 
 # We could probably remove the price outliers with no reviews since they are probably fake
 

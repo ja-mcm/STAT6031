@@ -11,7 +11,7 @@ set.seed(111)
 
 #### SOME BOILERPLATE CODE TO COMPARE OLS AGAINST ROBUST REGRESSION
 # Get rid of high dimensional dummy variables, just for convenience
-final_data[,c("host_location", "host_response_rate", "host_acceptance_rate", "latitude","longitude"):=NULL]
+final_data[,c("id","host_location", "host_response_rate", "host_acceptance_rate", "latitude","longitude", "amenities_list", "last_review", "host_neighbourhood", "neighbourhood_cleansed"):=NULL]
 
 
 #### TRAIN MODEL
