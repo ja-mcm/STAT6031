@@ -103,3 +103,20 @@ all_amenities[V1 %like% "Coffee"]
 # etc
 # Which amenities are strongly associated with higher prices?
 
+### Potential dummy variables for "significant" amenities
+bnb_data[amenities_list %like% "Long term stays allowed",has_long_term:=1]
+bnb_data[amenities_list %like% "Backyard",has_backyard:=1]
+bnb_data[amenities_list %like% "Patio",has_patio:=1]
+bnb_data[amenities_list %like% "Pool",has_pool:=1]
+bnb_data[amenities_list %like% "Stainless",has_stainless:=1]
+bnb_data[amenities_list %like% "Lake",has_lake:=1]
+bnb_data[amenities_list %like% "Private",has_privacy:=1]
+bnb_data[amenities_list %like% "Window guards",has_window_guards:=1]
+bnb_data[amenities_list %like% "Indoor fireplace",has_indoor_fireplace:=1]
+
+bnb_data[]
+
+
+cols <- names(bnb_data)[names(bnb_data) %like% "has" & !names(bnb_data) %in% c("host_has_profile_pic", "has_availability")]
+bnb_data[ , (cols) := lapply(.SD, nafill, fill=0), .SDcols = cols]
+

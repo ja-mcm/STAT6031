@@ -23,8 +23,7 @@ ggplot(final_data,aes(price)) + geom_histogram() + labs(title = "Distribution of
 # Log transform isn't perfect either...
 ggplot(final_data,aes(log(price))) + geom_histogram() + labs(title = "Distribution of log(AirBNB Prices) - New Orleans")
 
-# Be on the lookout for anomalous entries (we removed the ones @ $999)
+# Be on the lookout for anomalous entries
 # We'll need to identify these quickly so that our price prediction accuracy doesn't get tanked.
-
 
 
