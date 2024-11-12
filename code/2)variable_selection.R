@@ -10,80 +10,54 @@ library(dplyr)
 ### BE SURE TO RUN 
 # - 1)clean_data.R to load a cleaned dataset
 
-
 # Select useful variables
+
+#colnames(bnb_data)
 filtered_data <- bnb_data %>% 
-  dplyr::select(host_since, host_location, host_listings_count, host_response_time,
-                host_response_rate, host_acceptance_rate, host_is_superhost,
-                host_total_listings_count, host_has_profile_pic, host_identity_verified,
-                latitude, longitude, room_type, accommodates, bathrooms, beds, price, 
-                #minimum nights, maximum nights, minimum_nights_avg_ntm, maximum_nights_avg_ntm,
-                number_of_reviews, review_scores_rating, review_scores_accuracy,
-                review_scores_cleanliness, review_scores_checkin, review_scores_communication, 
-                review_scores_location, review_scores_value,near_top_10)
+  dplyr::select(-listing_url, -scrape_id, -last_scraped, -source, -name, -description,
+                -picture_url, -host_id, -host_url, -host_name, -host_about, 
+                -host_thumbnail_url, -host_picture_url, -bathrooms_text, -minimum_nights,
+                - maximum_nights, -minimum_minimum_nights, -maximum_minimum_nights,
+                - minimum_maximum_nights, -maximum_maximum_nights, -calendar_updated,
+                - has_availability, -calendar_last_scraped, -first_review, -license,
+                -neighborhood_overview, -host_verifications, -neighbourhood, 
+                -neighbourhood_group_cleansed, -property_type, -beds, -amenities)
 
+# Do we keep host_neighborhood?
+# Which one to keep? host_listings_count or host_total_listings_count
 
-# Replace empty values or N/A values by NA and count how many missing values per column
-# Replace "N/A" with NA in the entire dataset
+# Replace "N/A" and empty with NA in the entire dataset
 filtered_data <- filtered_data %>%
-  mutate(across(c(host_response_time, host_response_rate, host_acceptance_rate), ~ na_if(., "N/A")))
-
-# Replace empty with NA in the entire dataset
-filtered_data <- filtered_data %>%
-  # Apply `na_if()` to character columns only
-  mutate(across(c(host_location, host_is_superhost, host_acceptance_rate), ~ na_if(., "")))
+  mutate(across(where(is.character), ~ na_if(., "N/A"))) %>%
+  mutate(across(where(is.character), ~ na_if(., "")))
 
 # Look at $ of NA per column
 na_counts <- colSums(is.na(filtered_data))
-na_counts
+
+# Here, review_scores_rating, review_scores_accuracy, review_scores_cleanliness,
+# review_scores_checkin, review_scores_communication, review_scores_location,                          review_scores_value 
+# review_scores_value and reviews_per_month all have 879 missing values, look at
+# whether they happen in the exact same rows
+
+columns_of_interest <- c(
+  "review_scores_rating", "review_scores_accuracy", "review_scores_cleanliness",
+  "review_scores_checkin", "review_scores_communication", "review_scores_location",
+  "review_scores_value", "reviews_per_month")
+
+# Filter rows where all specified columns have NA values and select the 'id' column
+rows_with_all_nas_ids <- filtered_data %>%
+  filter(if_all(all_of(columns_of_interest), is.na)) %>%
+  select(id)
+
+# View the IDs of the rows with all specified columns as NA
+count(rows_with_all_nas_ids)
+
+# All NAs happen in the exact same rows. Remove them?
 
 ## Convert T/F to 1/0 --> true = 1, false = 0
 filtered_data <- filtered_data %>%
   mutate(across(c(host_is_superhost, host_has_profile_pic, host_identity_verified),
                 ~ if_else(as.character(.) == "t", 1, if_else(as.character(.) == "f", 0, NA_real_))))
-
-
-##### I THINK WE CAN DROP THIS, SINCE LM FUNCTION WILL CREATE THE DUMMY VARS FOR US AUTOMAGICALLY
-#### >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-# Code categorical variables with different levels as dummy variables
-# Room Type
-# table(filtered_data$room_type)
-# 
-# # Create dummy varaible to code room_type column
-# dummies_roomtype <- model.matrix(~ room_type - 1, data = filtered_data)
-# 
-# # Convert the matrix to a data frame and add it to the original dataset
-# filtered_data <- cbind(filtered_data, dummies_roomtype)
-# 
-# # Host Response Type
-# table(filtered_data$host_response_time)
-# 
-# # Create dummy varaible to code host_response_time column
-# filtered_data$host_response_time[is.na(filtered_data$host_response_time)] <- "unknown"
-# 
-# # Create dummy variables including the "unknown" category
-# dummies_responsetime <- model.matrix(~ host_response_time - 1, data = filtered_data)
-# 
-# # Add the dummy variables back to the data
-# filtered_data <- cbind(filtered_data, dummies_responsetime)
-# 
-# colnames(filtered_data) <- gsub(" ", "_", colnames(filtered_data))
-# colnames(filtered_data) <- gsub("/", "_", colnames(filtered_data))
-# 
-# filtered_data <- filtered_data %>%
-#   rename(entire_unit = room_typeEntire_home_apt,
-#          hotel = room_typeHotel_room,
-#          private_room = room_typePrivate_room,
-#          shared_room = room_typeShared_room)
-# 
-# filtered_data <- filtered_data %>%
-#   rename(resp_time_days = host_response_timea_few_days_or_more,
-#          resp_time_unknown = host_response_timeunknown,
-#          resp_time_day = host_response_timewithin_a_day,
-#          resp_time_hours = host_response_timewithin_a_few_hours,
-#          resp_time_one_hour = host_response_timewithin_an_hour)
-
 
 # Modify host_since column to host for x years, easier to model
 filtered_data <- filtered_data %>%
@@ -93,10 +67,18 @@ filtered_data <- filtered_data %>%
     host_since_year = as.Date(host_since_year),            # Convert to Date
     host_years = ifelse(!is.na(host_since_year),            # Check if the date is valid
                         as.numeric(format(Sys.Date(), "%Y")) - as.numeric(format(host_since_year, "%Y")),
-                        NA)                               # If not valid, set as NA
-  )
+                        NA)) %>%
+  dplyr::select(-host_since, -host_since_year)
 
-# Create final dataset
-final_data <- filtered_data %>%
-  select(-host_since, -room_type, -host_since_year, -host_response_time)
+# Code host_location column as 1 if New Orleans, 0 otherwise
+filtered_data <- filtered_data %>%
+  mutate(host_location = if_else(host_location == "New Orleans, LA", 1, 0))
+
+
+# We could probably remove the price outliers with no reviews since they are probably fake
+
+rm(rows_with_all_nas_ids)
+rm(outliers)
+rm(na_counts)
+rm(columns_of_interest)
 
