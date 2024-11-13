@@ -114,9 +114,6 @@ bnb_data[amenities_list %like% "Private",has_privacy:=1]
 bnb_data[amenities_list %like% "Window guards",has_window_guards:=1]
 bnb_data[amenities_list %like% "Indoor fireplace",has_indoor_fireplace:=1]
 
-bnb_data[]
-
-
 cols <- names(bnb_data)[names(bnb_data) %like% "has" & !names(bnb_data) %in% c("host_has_profile_pic", "has_availability")]
 bnb_data[ , (cols) := lapply(.SD, nafill, fill=0), .SDcols = cols]
 

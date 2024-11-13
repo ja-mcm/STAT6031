@@ -11,7 +11,7 @@ set.seed(111)
 
 #### SOME BOILERPLATE CODE TO COMPARE OLS AGAINST ROBUST REGRESSION
 # Get rid of high dimensional dummy variables, just for convenience
-final_data[,c("id","host_location", "host_response_rate", "host_acceptance_rate", "latitude","longitude", "amenities_list", "last_review", "host_neighbourhood", "neighbourhood_cleansed"):=NULL]
+final_data[,c("id","host_location", "amenities_list", "host_neighbourhood"):=NULL]
 
 
 #### TRAIN MODEL
@@ -112,5 +112,7 @@ test_preds[!is.na(LM), sqrt(sum((LM_CV-ACTUAL)^2/.N))] #RAND_FOREST (  )
 
 # off by $210, on average....
 
+### We could probably grid.tune the lasso to check more lambda values 
+# Here, it only explored 0.1, 0.5, 0.9
 
 

@@ -44,14 +44,6 @@ columns_of_interest <- c(
   "review_scores_checkin", "review_scores_communication", "review_scores_location",
   "review_scores_value", "reviews_per_month")
 
-# Filter rows where all specified columns have NA values and select the 'id' column
-rows_with_all_nas_ids <- filtered_data %>%
-  filter(if_all(all_of(columns_of_interest), is.na)) %>%
-  select(id)
-
-# View the IDs of the rows with all specified columns as NA
-count(rows_with_all_nas_ids)
-
 # All NAs happen in the exact same rows. Remove them?
 
 ## Convert T/F to 1/0 --> true = 1, false = 0
@@ -89,4 +81,9 @@ final_data$host_response_rate <- as.numeric(final_data$host_response_rate)
 
 final_data$host_acceptance_rate <- as.numeric(gsub("%", "", final_data$host_acceptance_rate))
 final_data$host_acceptance_rate <- as.numeric(final_data$host_acceptance_rate)
+
+
+## Remove calculated fields - these are duplicative
+cols <- names(final_data)[names(final_data) %like% "calculated"]
+final_data[ , (cols) := NULL]
 
