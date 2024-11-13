@@ -31,10 +31,7 @@ set.seed(123)
 
 numeric_data <- final_data %>%
   dplyr::select(-neighbourhood_cleansed, -room_type, -amenities_list,
-                -host_response_time, -id, -calculated_host_listings_count_entire_homes,
-                -calculated_host_listings_count_private_rooms, 
-                -calculated_host_listings_count_shared_rooms,
-                -calculated_host_listings_count)
+                -host_response_time)
 
 numeric_data <- as_tibble(numeric_data)
 

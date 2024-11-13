@@ -70,8 +70,6 @@ final_data <- filtered_data
 
 
 # We could probably remove the price outliers with no reviews since they are probably fake
-
-rm(rows_with_all_nas_ids)
 rm(na_counts)
 rm(columns_of_interest)
 

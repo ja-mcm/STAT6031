@@ -11,7 +11,7 @@ set.seed(111)
 
 #### SOME BOILERPLATE CODE TO COMPARE OLS AGAINST ROBUST REGRESSION
 # Get rid of high dimensional dummy variables, just for convenience
-final_data[,c("id","host_location", "amenities_list", "host_neighbourhood"):=NULL]
+final_data[,c("host_location", "amenities_list", "neighbourhood_cleansed", "host_response_rate", "host_acceptance_rate"):=NULL]
 
 
 #### TRAIN MODEL
@@ -32,8 +32,6 @@ lm_1_robust <- rlm(log(price)~.,data=data_train)
 summary(lm_1)
 summary(lm_1_robust)
 
-# Robust regression has lower training RMSE:
-# .387 vs .4468
 
 # TRAINING predictions 
 train_preds <- cbind(exp(lm_1$fitted.values), exp(lm_1_robust$fitted.values), exp(lm_1$model[1])) |> as.data.table()
@@ -45,10 +43,10 @@ instruct_cv <- trainControl(method = "repeatedcv",
                            number = 10,     # number of folds
                            repeats = 10)    # repeated ten times
 
-model_cv_lasso <- train(log(price) ~ .,
+model_cv_stepwise <- train(log(price) ~ .,
                   data = data_train,
                   preProc = c("center", "scale"), ## pre-processing of variables
-                  method = "lasso",  # now we're using the lasso method
+                  method = "lmStepAIC",  
                   na.action=na.exclude,
                   trControl = instruct_cv)  
 
@@ -66,10 +64,10 @@ model_cv_lm <- train(log(price) ~ .,
                           na.action=na.exclude,
                           trControl = instruct_cv)  
 
-model_cv_rf <- train(log(price) ~ .,
+model_cv_lasso <- train(log(price) ~ .,
                      data = data_train,
                      preProc = c("center", "scale"), ## pre-processing of variables
-                     method = "rf", 
+                     method = "lasso", 
                      na.action=na.exclude,
                      trControl = instruct_cv)  
 
@@ -77,10 +75,10 @@ model_cv_rf <- train(log(price) ~ .,
 # Use 20% of data to evaluate goodness of fit for each candidate model
 lm_1_pred <- predict(lm_1,data_test)
 lm_1_robust_pred <- predict(lm_1_robust,data_test)
-cv_1_lasso_pred <- predict(model_cv_lasso,data_test)
+cv_1_stepwise_pred <- predict(model_cv_stepwise,data_test)
 cv_1_boost_pred <- predict(model_cv_boostlm,data_test)
 cv_1_lm_pred <- predict(model_cv_lm,data_test)
-cv_1_rf_pred <- predict(model_cv_lm,data_test)
+cv_1_lasso <- predict(model_cv_lasso,data_test)
 
 ### Compare TEST predictions
 test_preds <- cbind(exp(lm_1_pred), 
@@ -91,26 +89,26 @@ test_preds <- cbind(exp(lm_1_pred),
                     1,
                     data_test$price) |> as.data.table()
 test_preds <- test_preds[!is.na(V1)]
-setnames(test_preds, c("LM", "LM_ROBUST", "LASSO", "LM_BOOST", "LM_CV", "RAND_FOREST", "ACTUAL"))
-test_preds[,LASSO:=exp(cv_1_lasso_pred)]
+setnames(test_preds, c("LM", "LM_ROBUST", "STEPWISE", "LM_BOOST", "LM_CV", "LASSO", "ACTUAL"))
+test_preds[,STEPWISE:=exp(model_cv_stepwise)]
 test_preds[,LM_BOOST:=exp(cv_1_boost_pred)]
 test_preds[,LM_CV:=exp(cv_1_lm_pred)]
-test_preds[,RAND_FOREST:=exp(cv_1_rf_pred)]
+test_preds[,LASSO:=exp(cv_1_lasso)]
 
 head(test_preds, 30)
 
 
 ### RMSE of predictions
 # Based on test predictions, the lasso method wins!
-test_preds[!is.na(LM), sqrt(sum((LM-ACTUAL)^2/.N))] #LM (213.84)
-test_preds[!is.na(LM), sqrt(sum((LM_ROBUST-ACTUAL)^2/.N))] #LM_ROBUST (238.95)
+test_preds[!is.na(LM), sqrt(sum((LM-ACTUAL)^2/.N))] #LM (120.554)
+test_preds[!is.na(LM), sqrt(sum((LM_ROBUST-ACTUAL)^2/.N))] #LM_ROBUST (122.169)
 # Add other models
-test_preds[!is.na(LM), sqrt(sum((LASSO-ACTUAL)^2/.N))] #LASSO (209.79)
-test_preds[!is.na(LM), sqrt(sum((LM_BOOST-ACTUAL)^2/.N))] #LM_BOOST (192.2457)
-test_preds[!is.na(LM), sqrt(sum((LM_CV-ACTUAL)^2/.N))] #LM (213.84)
-test_preds[!is.na(LM), sqrt(sum((LM_CV-ACTUAL)^2/.N))] #RAND_FOREST (  )
+test_preds[!is.na(LM), sqrt(sum((STEPWISE-ACTUAL)^2/.N))] #STEPWISE (260.470)
+test_preds[!is.na(LM), sqrt(sum((LM_BOOST-ACTUAL)^2/.N))] #LM_BOOST (116.463)
+test_preds[!is.na(LM), sqrt(sum((LM_CV-ACTUAL)^2/.N))] #LM (120.553)
+test_preds[!is.na(LM), sqrt(sum((LASSO-ACTUAL)^2/.N))] #LASSO (119.618)
 
-# off by $210, on average....
+# off by $120, on average....
 
 ### We could probably grid.tune the lasso to check more lambda values 
 # Here, it only explored 0.1, 0.5, 0.9
