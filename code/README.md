@@ -1,10 +1,21 @@
 # Modeling
+
+### Notes
 - We agreed an interaction variable between # of reviews and review score made sense (ie. more good scores counts for more than only a few good scores...)
 - Variables that might need log-transforms:
      - Price
      - Near_Top_10
      - Host_Listings
      - basically, anything we suspect has "diminishing returns" as X increases....
+
+
+# Variable Selection
+
+#### Notes
+- We dropped highly correlated columns related to host listings. See Correlation Plot
+- There were also a variety of columns that were clearly not valuable (ie. host_verification_method)
+- Additionally, text descriptions were omitted, given their limited information content 
+  - details about the listing are readily available in the Amenities, which we did make use of
 
 
 # Data Wrangling

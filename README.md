@@ -23,7 +23,7 @@ TBD
 # TODO 
 1) Clean out duplicates/bad data (JACK)
 2) Decide which variables to keep/model (ADRIANA)
-3) EDA 
-4) Model selection
-5) Validation
+3) EDA (ADRIANA)
+4) Model selection (JACK)
+5) Validation 
 6) Report writing
