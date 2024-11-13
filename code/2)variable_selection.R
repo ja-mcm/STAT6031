@@ -21,10 +21,10 @@ filtered_data <- bnb_data %>%
                 - minimum_maximum_nights, -maximum_maximum_nights, -calendar_updated,
                 - has_availability, -calendar_last_scraped, -first_review, -license,
                 -neighborhood_overview, -host_verifications, -neighbourhood, 
-                -neighbourhood_group_cleansed, -property_type, -beds, -amenities)
+                -neighbourhood_group_cleansed, -property_type, -beds, -amenities,
+                -host_listings_count, - host_neighbourhood, -last_review)
 
 # Do we keep host_neighborhood?
-# Which one to keep? host_listings_count or host_total_listings_count
 
 # Replace "N/A" and empty with NA in the entire dataset
 filtered_data <- filtered_data %>%
@@ -56,7 +56,7 @@ count(rows_with_all_nas_ids)
 
 ## Convert T/F to 1/0 --> true = 1, false = 0
 filtered_data <- filtered_data %>%
-  mutate(across(c(host_is_superhost, host_has_profile_pic, host_identity_verified),
+  mutate(across(c(host_is_superhost, host_has_profile_pic, host_identity_verified, instant_bookable),
                 ~ if_else(as.character(.) == "t", 1, if_else(as.character(.) == "f", 0, NA_real_))))
 
 # Modify host_since column to host for x years, easier to model
@@ -80,7 +80,13 @@ final_data <- filtered_data
 # We could probably remove the price outliers with no reviews since they are probably fake
 
 rm(rows_with_all_nas_ids)
-rm(outliers)
 rm(na_counts)
 rm(columns_of_interest)
+
+# Remove % symbol and convert to numeric
+final_data$host_response_rate <- as.numeric(gsub("%", "", final_data$host_response_rate))
+final_data$host_response_rate <- as.numeric(final_data$host_response_rate)
+
+final_data$host_acceptance_rate <- as.numeric(gsub("%", "", final_data$host_acceptance_rate))
+final_data$host_acceptance_rate <- as.numeric(final_data$host_acceptance_rate)
 
