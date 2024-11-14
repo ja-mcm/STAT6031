@@ -21,7 +21,7 @@ filtered_data <- bnb_data %>%
                 - minimum_maximum_nights, -maximum_maximum_nights, -calendar_updated,
                 - has_availability, -calendar_last_scraped, -first_review, -license,
                 -neighborhood_overview, -host_verifications, -neighbourhood, 
-                -neighbourhood_group_cleansed, -property_type, -beds, -amenities,
+                -neighbourhood_group_cleansed, -property_type, -amenities,
                 -host_listings_count, - host_neighbourhood, -last_review)
 
 # Do we keep host_neighborhood?
@@ -84,4 +84,5 @@ final_data$host_acceptance_rate <- as.numeric(final_data$host_acceptance_rate)
 ## Remove calculated fields - these are duplicative
 cols <- names(final_data)[names(final_data) %like% "calculated"]
 final_data[ , (cols) := NULL]
+
 

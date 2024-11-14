@@ -70,9 +70,6 @@ near_id <- near_id[,near_top_10 := .N, by=id]
 bnb_data <- near_id[bnb_data,on="id"]
 bnb_data <- bnb_data[is.na(near_top_10), near_top_10:=0] |> unique()
 
-rm(near_id)
-rm(i)
-
 
 ### 3) Parse Amenities JSON
 # -------------------------------
@@ -117,3 +114,14 @@ bnb_data[amenities_list %like% "Indoor fireplace",has_indoor_fireplace:=1]
 cols <- names(bnb_data)[names(bnb_data) %like% "has" & !names(bnb_data) %in% c("host_has_profile_pic", "has_availability")]
 bnb_data[ , (cols) := lapply(.SD, nafill, fill=0), .SDcols = cols]
 
+
+### Remove "unrealized" listings - these have anomalous prices AND zero availability
+# Or, not available within the next 365 days.....
+# These are likely to have never had an actual stay and therefore their pricing is not relevant to our model
+high_low <- bnb_data[,quantile(price, probs=c(.025, 0.975))]
+bnb_data <- bnb_data[!(((price>high_low[2] | price<high_low[1]) & availability_30 == 0) | availability_365 == 0)]
+
+## Misc cleanup
+rm(high_low)
+rm(near_id)
+rm(i)
