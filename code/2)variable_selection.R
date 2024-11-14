@@ -86,3 +86,7 @@ cols <- names(final_data)[names(final_data) %like% "calculated"]
 final_data[ , (cols) := NULL]
 
 
+### Do we want to:
+# 1) Standardize
+# 2) Center
+# 3) Remove NAs/impute NAs?
