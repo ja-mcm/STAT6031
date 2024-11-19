@@ -14,10 +14,31 @@ final_data[,c("id", "host_location", "amenities_list", "neighbourhood_cleansed",
 # Get rid of rows with NAs
 final_data <- na.omit(final_data)
 
+# Create Dummy Variables
+inds <- unique(final_data$host_response_time)
+final_data[, (inds) := lapply(inds, function(x) {ifelse(host_response_time == x, 1, 0)})]
+final_data[,host_response_time:=NULL] ### Drop original column
+final_data[,`a few days or more`:=NULL] ### drop one dummy column, to avoid perfect collinearity
+
+inds <- unique(final_data$room_type)
+final_data[, (inds) := lapply(inds, function(x) {ifelse(room_type == x, 1, 0)})]
+final_data[,room_type:=NULL] ### Drop original column
+final_data[,`Shared room`:=NULL] ### drop one dummy column, to avoid perfect collinearity
+
+
+final_data[,log_price := log(price)]
+final_data[,price:=NULL]
+
+# Scale and center 
+cols <- colnames(final_data)
+final_data[, (cols) := lapply(.SD, scale), .SDcols=cols]
+
+
+
 #### TRAIN MODEL
 ### Set up train/test split
 tt_split <- createDataPartition(
-  y = final_data$price,
+  y = final_data$log_price,
   p = .80, ## The percentage of data in the training set
   list = FALSE
 )
@@ -26,8 +47,8 @@ data_train <- final_data[ tt_split,]
 data_test  <- final_data[-tt_split,]
 
 ### Run 2 full regression models (robust vs regular LS), for comparison
-lm_1 <- lm(log(price)~.,data=data_train)
-lm_1_robust <- rlm(log(price)~.,data=data_train)
+lm_1 <- lm(log_price~.,data=data_train)
+lm_1_robust <- rlm(log_price~.,data=data_train)
 
 summary(lm_1)
 #summary(lm_1_robust)
@@ -69,6 +90,8 @@ coef(lm_1_lasso)
 #                   alpha=1,
 #                   lambda=10^seq(-2,log10(exp(4)),length=101),
 #                   nfolds=10)
+
+
 
 
 
@@ -119,6 +142,7 @@ model_cv_lasso <- train(log(price) ~ .,
 lm_1_pred <- predict(lm_1,data_test)
 lm_1_robust_pred <- predict(lm_1_robust,data_test)
 lm_1_ridge_pred <- predict(lm_1_ridge,data_test)
+lm_1_lasso_pred <- predict(lm_1_lasso,data_test)
 
 
 cv_1_glmnet_pred <- predict(model_cv_glmnet,data_test)
