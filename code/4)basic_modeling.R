@@ -55,8 +55,8 @@ summary(lm_1)
 
 
 ### Run Stepwise model
-null_model <- lm(log(price) ~ 1, data = data_train[complete.cases(data_train)])
-full_model <- lm(log(price) ~ ., data = data_train[complete.cases(data_train)])
+null_model <- lm(log_price ~ 1, data = data_train[complete.cases(data_train)])
+full_model <- lm(log_price ~ ., data = data_train[complete.cases(data_train)])
 
 lm_1_step <- step(null_model, scope = list(lower = null_model, upper = full_model),
                        k = log(nrow(data_train)), trace = F)
@@ -65,8 +65,8 @@ summary(lm_1_step)
 
 
 ### Run ridge regression
-lm_1_ridge <- glmnet(final_data[, !"price", with=FALSE],
-                     final_data[,price],
+lm_1_ridge <- glmnet(final_data[, !"log_price", with=FALSE],
+                     final_data[,log_price],
                      alpha=0,
                      lambda=10^seq(-2,log10(exp(4)),length=101),
                      nfolds=10)
@@ -75,8 +75,8 @@ coef(lm_1_ridge)
 
 
 ### Run lasso regression
-lm_1_lasso<-glmnet(final_data[, !"price", with=FALSE],
-                      final_data[,price],
+lm_1_lasso<-glmnet(final_data[, !"log_price", with=FALSE],
+                      final_data[,log_price],
                      alpha=1,
                      lambda=10^seq(-2,log10(exp(4)),length=101),
                      nfolds=10)
@@ -96,7 +96,7 @@ coef(lm_1_lasso)
 
 
 # TRAINING predictions 
-train_preds <- cbind(exp(lm_1$fitted.values), exp(lm_1_robust$fitted.values), exp(lm_1$model[1])) |> as.data.table()
+train_preds <- cbind(exp(lm_1$fitted.values), exp(lm_1$model[1])) |> as.data.table()
 head(train_preds, 30)
 
 
