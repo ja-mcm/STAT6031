@@ -46,14 +46,14 @@ data_test  <- model_data[-tt_split,]
 data_orig_train <- final_data[ tt_split,]
 data_orig_test <- final_data[ -tt_split,]
 
-###
 all.equal(data_train,data_orig_train)
 
 
+# scale price by log, to make the right-skewed distribution look more normal
 model_data[,log_price := log(price)]
 model_data[,price:=NULL]
 
-# Scale and center 
+# Scale and center all variables, to improve regression
 cols <- colnames(model_data)
 model_data[, (cols) := lapply(.SD, scale), .SDcols=cols]
 
@@ -83,27 +83,23 @@ summary(lm_1_step)
 
 
 ### Run ridge regression
-lm_1_ridge <- glmnet(data_train[, !"log_price", with=FALSE],
-                     data_train[,log_price],
-                     alpha=0,
-                     lambda=10^seq(-2,log10(exp(4)),length=101),
-                     nfolds=10)
+lm_1_ridge_cv<-cv.glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
+                             data_train[,log_price] |> as.matrix(),
+                             alpha=0,
+                             lambda=10^seq(-2,log10(exp(4)),length=101),
+                             nfolds=10)
 
-coef(lm_1_ridge)
+coef(lm_1_ridge_cv)
+
 
 
 ### Run lasso regression
-lm_1_lasso<-glmnet(data_train[, !"log_price", with=FALSE],
-                   data_train[,log_price],
-                     alpha=1,
-                     lambda=10^seq(-2,log10(exp(4)),length=101),
-                     nfolds=10)
-
-coef(lm_1_lasso)
-
-
-### TO DO
-# - find "best" Ridge/Lasso model coefficients
+lm_1_lasso_cv<-cv.glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
+                         data_train[,log_price] |> as.matrix(),
+                         alpha=1,
+                         lambda=10^seq(-2,log10(exp(4)),length=101),
+                         nfolds=10)
+coef(lm_1_lasso_cv)
 
 
 
@@ -112,8 +108,8 @@ coef(lm_1_lasso)
 lm_1_pred <- predict(lm_1,data_test)
 #lm_1_robust_pred <- predict(lm_1_robust,data_test)
 lm_1_step_pred <- predict(lm_1_step,data_test)
-lm_1_ridge_pred <- predict(lm_1_ridge,data_test[,!"log_price", with=FALSE] |> as.matrix())
-lm_1_lasso_pred <- predict(lm_1_lasso,data_test[,!"log_price", with=FALSE] |> as.matrix())
+lm_1_ridge_pred <- predict(lm_1_ridge_cv,data_test[,!"log_price", with=FALSE] |> as.matrix())
+lm_1_lasso_pred <- predict(lm_1_lasso_cv,data_test[,!"log_price", with=FALSE] |> as.matrix())
 
 
 set_price <- function(X) {exp(X) * final_data[,mean(price)] |> currency()}
@@ -122,8 +118,8 @@ set_price <- function(X) {exp(X) * final_data[,mean(price)] |> currency()}
 test_preds <- cbind(set_price(lm_1_pred), 
                     1,
                     set_price(lm_1_step_pred), 
-                    set_price(lm_1_ridge_pred)[,1], 
-                    set_price(lm_1_lasso_pred)[,40],
+                    set_price(lm_1_ridge_pred), 
+                    set_price(lm_1_lasso_pred),
                     set_price(data_test$log_price)) |> as.data.table()
 test_preds <- test_preds[!is.na(V1)]
 setnames(test_preds, c("LM", "LM_ROBUST", "STEPWISE", "RIDGE", "LASSO", "ACTUAL"))
@@ -134,14 +130,21 @@ head(test_preds, 30)
 ### RMSE of predictions
 # Based on test predictions, the lasso method wins!
 test_preds[!is.na(LM), sqrt(sum((LM-ACTUAL)^2/.N))] #LM
-test_preds[!is.na(LM), sqrt(sum((LM_ROBUST-ACTUAL)^2/.N))] #LM_ROBUST
+#test_preds[!is.na(LM), sqrt(sum((LM_ROBUST-ACTUAL)^2/.N))] #LM_ROBUST
 # Add other models
 test_preds[!is.na(LM), sqrt(sum((STEPWISE-ACTUAL)^2/.N))] #STEPWISE
 test_preds[!is.na(LM), sqrt(sum((RIDGE-ACTUAL)^2/.N))] #RIDGE
 test_preds[!is.na(LM), sqrt(sum((LASSO-ACTUAL)^2/.N))] #LASSO
 
+
+### TO DO 
+## Diagnostics
+# Residuals
+
+
 # Outliers
 test_preds[LM==max(test_preds$LM)]
 data_orig_test[545]
 
+# Boxplot (range of predictions vs range of actual observations)
 
