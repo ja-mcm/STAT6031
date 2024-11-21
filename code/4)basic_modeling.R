@@ -38,17 +38,6 @@ tt_split <- createDataPartition(
   list = FALSE
 )
 
-## Create scaled and non-scaled datasets 
-# Scaled will be used for regression model/predictions
-# Non-scaled will help us evaluate our predictions
-data_train <- model_data[ tt_split,]
-data_test  <- model_data[-tt_split,]
-data_orig_train <- final_data[ tt_split,]
-data_orig_test <- final_data[ -tt_split,]
-
-all.equal(data_train,data_orig_train)
-
-
 # scale price by log, to make the right-skewed distribution look more normal
 model_data[,log_price := log(price)]
 model_data[,price:=NULL]
@@ -57,10 +46,14 @@ model_data[,price:=NULL]
 cols <- colnames(model_data)
 model_data[, (cols) := lapply(.SD, scale), .SDcols=cols]
 
-# Re-split, now that modeling data is scaled
+
+## Create scaled and non-scaled datasets 
+# Scaled will be used for regression model/predictions
+# Non-scaled will help us evaluate our predictions
 data_train <- model_data[ tt_split,]
 data_test  <- model_data[-tt_split,]
-
+data_orig_train <- final_data[ tt_split,]
+data_orig_test <- final_data[ -tt_split,]
 
 
 
@@ -112,29 +105,43 @@ lm_1_ridge_pred <- predict(lm_1_ridge_cv,data_test[,!"log_price", with=FALSE] |>
 lm_1_lasso_pred <- predict(lm_1_lasso_cv,data_test[,!"log_price", with=FALSE] |> as.matrix())
 
 
-set_price <- function(X) {exp(X) * final_data[,mean(price)] |> currency()}
+set_price <- function(X) {exp(X) * data_orig_test[,mean(price)] |> currency()}
 
 ### Compare TEST predictions
-test_preds <- cbind(set_price(lm_1_pred), 
+test_preds <- cbind(seq(1:length(lm_1_pred)), 
+                    set_price(lm_1_pred),
                     1,
                     set_price(lm_1_step_pred), 
                     set_price(lm_1_ridge_pred), 
                     set_price(lm_1_lasso_pred),
                     set_price(data_test$log_price)) |> as.data.table()
 test_preds <- test_preds[!is.na(V1)]
-setnames(test_preds, c("LM", "LM_ROBUST", "STEPWISE", "RIDGE", "LASSO", "ACTUAL"))
+setnames(test_preds, c("INDX", "LM", "LM_ROBUST", "STEPWISE", "RIDGE", "LASSO", "ACTUAL"))
 
 head(test_preds, 30)
 
 
+test_preds[,SSE_LM:=(LM-ACTUAL)^2]
+test_preds[,SSE_STEPWISE:=(STEPWISE-ACTUAL)^2]
+test_preds[,SSE_RIDGE:=(RIDGE-ACTUAL)^2]
+test_preds[,SSE_LASSO:=(LASSO-ACTUAL)^2]
+
 ### RMSE of predictions
-# Based on test predictions, the lasso method wins!
-test_preds[!is.na(LM), sqrt(sum((LM-ACTUAL)^2/.N))] #LM
-#test_preds[!is.na(LM), sqrt(sum((LM_ROBUST-ACTUAL)^2/.N))] #LM_ROBUST
-# Add other models
-test_preds[!is.na(LM), sqrt(sum((STEPWISE-ACTUAL)^2/.N))] #STEPWISE
-test_preds[!is.na(LM), sqrt(sum((RIDGE-ACTUAL)^2/.N))] #RIDGE
-test_preds[!is.na(LM), sqrt(sum((LASSO-ACTUAL)^2/.N))] #LASSO
+# Based on test predictions, the ridge method wins!
+test_preds[,sqrt(sum(SSE_LM))/.N]
+test_preds[,sqrt(sum(SSE_STEPWISE))/.N]
+test_preds[,sqrt(sum(SSE_RIDGE))/.N]
+test_preds[,sqrt(sum(SSE_LASSO))/.N]
+
+#Variable cleanup
+rm(all_amenities)
+rm(dest_points)
+rm(filtered_data)
+rm(null_model)
+rm(full_model)
+rm(tt_split)
+rm(cols)
+rm(inds)
 
 
 ### TO DO 
