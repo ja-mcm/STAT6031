@@ -21,9 +21,9 @@ TBD
   - Local rental rates ("How expensive is an equivalent apartment in that area?")'
 
 # TODO 
-1) Clean out duplicates/bad data (JACK)
-2) Decide which variables to keep/model (ADRIANA)
-3) EDA (ADRIANA)
+1) ~~Clean out duplicates/bad data (JACK)~~
+2) ~~Decide which variables to keep/model (ADRIANA)~~
+3) ~~EDA (ADRIANA)~~
 4) Model selection (JACK)
 5) Validation 
 6) Report writing
