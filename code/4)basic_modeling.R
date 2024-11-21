@@ -25,30 +25,33 @@ final_data[, (inds) := lapply(inds, function(x) {ifelse(room_type == x, 1, 0)})]
 final_data[,room_type:=NULL] ### Drop original column
 final_data[,`Shared room`:=NULL] ### drop one dummy column, to avoid perfect collinearity
 
+### Keep a reference dataset
+model_data <- copy(final_data)
 
-final_data[,log_price := log(price)]
-final_data[,price:=NULL]
 
 # Scale and center 
-cols <- colnames(final_data)
-final_data[, (cols) := lapply(.SD, scale), .SDcols=cols]
+model_data[,log_price := log(price)]
+model_data[,price:=NULL]
+
+cols <- colnames(model_data)
+model_data[, (cols) := lapply(.SD, scale), .SDcols=cols]
 
 
 
 #### TRAIN MODEL
 ### Set up train/test split
 tt_split <- createDataPartition(
-  y = final_data$log_price,
+  y = model_data$log_price,
   p = .80, ## The percentage of data in the training set
   list = FALSE
 )
 
-data_train <- final_data[ tt_split,]
-data_test  <- final_data[-tt_split,]
+data_train <- model_data[ tt_split,]
+data_test  <- model_data[-tt_split,]
 
-### Run 2 full regression models (robust vs regular LS), for comparison
+### Run 2 full regression models (regular LS and robust), for comparison
 lm_1 <- lm(log_price~.,data=data_train)
-lm_1_robust <- rlm(log_price~.,data=data_train)
+#lm_1_robust <- rlm(log_price~.,data=data_train)
 
 summary(lm_1)
 #summary(lm_1_robust)
@@ -65,8 +68,8 @@ summary(lm_1_step)
 
 
 ### Run ridge regression
-lm_1_ridge <- glmnet(final_data[, !"log_price", with=FALSE],
-                     final_data[,log_price],
+lm_1_ridge <- glmnet(data_train[, !"log_price", with=FALSE],
+                     data_train[,log_price],
                      alpha=0,
                      lambda=10^seq(-2,log10(exp(4)),length=101),
                      nfolds=10)
@@ -75,8 +78,8 @@ coef(lm_1_ridge)
 
 
 ### Run lasso regression
-lm_1_lasso<-glmnet(final_data[, !"log_price", with=FALSE],
-                      final_data[,log_price],
+lm_1_lasso<-glmnet(data_train[, !"log_price", with=FALSE],
+                   data_train[,log_price],
                      alpha=1,
                      lambda=10^seq(-2,log10(exp(4)),length=101),
                      nfolds=10)
@@ -84,86 +87,25 @@ lm_1_lasso<-glmnet(final_data[, !"log_price", with=FALSE],
 coef(lm_1_lasso)
 
 
-#### CV method does not work.....
-#lm_1_lasso<-cv.glmnet(final_data[, !"price", with=FALSE],
-#                   final_data[,price],
-#                   alpha=1,
-#                   lambda=10^seq(-2,log10(exp(4)),length=101),
-#                   nfolds=10)
-
-
-
-
-
-# TRAINING predictions 
-train_preds <- cbind(exp(lm_1$fitted.values), exp(lm_1$model[1])) |> as.data.table()
-head(train_preds, 30)
-
-
-### Cross validation for improving robustness of training 
-
-lassoGrid <-  expand.grid()
-
-
-instruct_cv <- trainControl(method = "repeatedcv",   
-                           number = 10,     # number of folds
-                           repeats = 10)    # repeated ten times
-
-model_cv_glmnet <- train(log(price) ~ .,
-                  data = data_train,
-                  preProc = c("center", "scale"), ## pre-processing of variables
-                  method = "glmnet",  
-                  na.action=na.exclude,
-                  trControl = instruct_cv)  
-
-model_cv_boostlm <- train(log(price) ~ .,
-                          data = data_train,
-                          preProc = c("center", "scale"), ## pre-processing of variables
-                          method = "BstLm", 
-                          na.action=na.exclude,
-                          trControl = instruct_cv)  
-
-model_cv_lm <- train(log(price) ~ .,
-                          data = data_train,
-                          preProc = c("center", "scale"), ## pre-processing of variables
-                          method = "lm", 
-                          na.action=na.exclude,
-                          trControl = instruct_cv)  
-
-model_cv_lasso <- train(log(price) ~ .,
-                     data = data_train,
-                     preProc = c("center", "scale"), ## pre-processing of variables
-                     method = "lasso", 
-                     na.action=na.exclude,
-                     trControl = instruct_cv)  
-
 #### TEST MODEL
 # Use 20% of data to evaluate goodness of fit for each candidate model
 lm_1_pred <- predict(lm_1,data_test)
-lm_1_robust_pred <- predict(lm_1_robust,data_test)
-lm_1_ridge_pred <- predict(lm_1_ridge,data_test)
-lm_1_lasso_pred <- predict(lm_1_lasso,data_test)
+#lm_1_robust_pred <- predict(lm_1_robust,data_test)
+lm_1_step_pred <- predict(lm_1_step,data_test)
+lm_1_ridge_pred <- predict(lm_1_ridge,data_test[,!"log_price", with=FALSE] |> as.matrix())
+lm_1_lasso_pred <- predict(lm_1_lasso,data_test[,!"log_price", with=FALSE] |> as.matrix())
 
-
-cv_1_glmnet_pred <- predict(model_cv_glmnet,data_test)
-cv_1_boost_pred <- predict(model_cv_boostlm,data_test)
-cv_1_lm_pred <- predict(model_cv_lm,data_test)
-cv_1_lasso <- predict(model_cv_lasso,data_test)
+set_price <- function(X) {exp(X) * final_data[,mean(price)] |> currency()}
 
 ### Compare TEST predictions
-test_preds <- cbind(exp(lm_1_pred), 
-                    exp(lm_1_robust_pred), 
-                    1, 
+test_preds <- cbind(set_price(lm_1_pred), 
                     1,
-                    1,
-                    1,
-                    data_test$price) |> as.data.table()
+                    set_price(lm_1_step_pred), 
+                    set_price(lm_1_ridge_pred)[,1], 
+                    set_price(lm_1_lasso_pred)[,1],
+                    set_price(data_test$log_price)) |> as.data.table()
 test_preds <- test_preds[!is.na(V1)]
-setnames(test_preds, c("LM", "LM_ROBUST", "GLM_NET", "LM_BOOST", "LM_CV", "LASSO", "ACTUAL"))
-test_preds[,GLM_NET:=exp(model_cv_stepwise)]
-test_preds[,LM_BOOST:=exp(cv_1_boost_pred)]
-test_preds[,LM_CV:=exp(cv_1_lm_pred)]
-test_preds[,LASSO:=exp(cv_1_lasso)]
+setnames(test_preds, c("LM", "LM_ROBUST", "STEPWISE", "RIDGE", "LASSO", "ACTUAL"))
 
 head(test_preds, 30)
 
