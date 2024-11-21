@@ -43,9 +43,7 @@ model_data[,log_price := log(price)]
 model_data[,price:=NULL]
 
 # Scale and center all variables, to improve regression
-cols <- colnames(model_data)
-model_data[, (cols) := lapply(.SD, scale), .SDcols=cols]
-
+model_data <- model_data %>% mutate_all(~(scale(.) %>% as.vector))
 
 ## Create scaled and non-scaled datasets 
 # Scaled will be used for regression model/predictions
@@ -58,65 +56,74 @@ data_orig_test <- final_data[ -tt_split,]
 
 
 ### Run 2 full regression models (regular LS and robust), for comparison
-lm_1 <- lm(log_price~.,data=data_train)
-#lm_1_robust <- rlm(log_price~.,data=data_train)
+lm <- lm(log_price~.,data=data_train)
+#lm_robust <- rlm(log_price~.,data=data_train)
 
-summary(lm_1)
-#summary(lm_1_robust)
+summary(lm)
+#summary(lm_robust)
 
 
 ### Run Stepwise model
 null_model <- lm(log_price ~ 1, data = data_train[complete.cases(data_train)])
 full_model <- lm(log_price ~ ., data = data_train[complete.cases(data_train)])
 
-lm_1_step <- step(null_model, scope = list(lower = null_model, upper = full_model),
+lm_step <- step(null_model, scope = list(lower = null_model, upper = full_model),
                        k = log(nrow(data_train)), trace = F)
 
-summary(lm_1_step)
+summary(lm_step)
 
 
 ### Run ridge regression
-lm_1_ridge_cv<-cv.glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
+lm_ridge_cv<-cv.glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
                              data_train[,log_price] |> as.matrix(),
                              alpha=0,
                              lambda=10^seq(-2,log10(exp(4)),length=101),
                              nfolds=10)
 
-coef(lm_1_ridge_cv)
+coef(lm_ridge_cv, s=lm_ridge_cv$lambda.min)
+plot(lm_ridge_cv)
 
 
 
 ### Run lasso regression
-lm_1_lasso_cv<-cv.glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
+lm_lasso_cv<-cv.glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
                          data_train[,log_price] |> as.matrix(),
                          alpha=1,
                          lambda=10^seq(-2,log10(exp(4)),length=101),
                          nfolds=10)
-coef(lm_1_lasso_cv)
+coef(lm_lasso_cv, lm_lasso_cv$lambda.min)
+plot(lm_lasso_cv)
 
 
 
 #### TEST MODEL
 # Use 20% of data to evaluate goodness of fit for each candidate model
-lm_1_pred <- predict(lm_1,data_test)
-#lm_1_robust_pred <- predict(lm_1_robust,data_test)
-lm_1_step_pred <- predict(lm_1_step,data_test)
-lm_1_ridge_pred <- predict(lm_1_ridge_cv,data_test[,!"log_price", with=FALSE] |> as.matrix())
-lm_1_lasso_pred <- predict(lm_1_lasso_cv,data_test[,!"log_price", with=FALSE] |> as.matrix())
-
+lm_pred <- predict(lm,data_test)
+#lm_robust_pred <- predict(lm_robust,data_test)
+lm_step_pred <- predict(lm_step,data_test)
+lm_ridge_pred <- predict(lm_ridge_cv,
+                         s =lm_ridge_cv$lambda.min,
+                         data_test[,!"log_price", with=FALSE] |> as.matrix())
+lm_lasso_pred <- predict(lm_lasso_cv,
+                         s =lm_lasso_cv$lambda.min,
+                         data_test[,!"log_price", with=FALSE] |> as.matrix())
 
 set_price <- function(X) {exp(X) * data_orig_test[,mean(price)] |> currency()}
 
+#### TO DO 
+# Get the Unscale function working properly....
+
 ### Compare TEST predictions
-test_preds <- cbind(seq(1:length(lm_1_pred)), 
-                    set_price(lm_1_pred),
+test_preds <- cbind(seq(1:length(lm_pred)), 
+                    set_price(lm_pred),
                     1,
-                    set_price(lm_1_step_pred), 
-                    set_price(lm_1_ridge_pred), 
-                    set_price(lm_1_lasso_pred),
-                    set_price(data_test$log_price)) |> as.data.table()
+                    set_price(lm_step_pred), 
+                    set_price(lm_ridge_pred), 
+                    set_price(lm_lasso_pred),
+                    set_price(data_test$log_price),
+                    data_orig_test$price) |> as.data.table()
 test_preds <- test_preds[!is.na(V1)]
-setnames(test_preds, c("INDX", "LM", "LM_ROBUST", "STEPWISE", "RIDGE", "LASSO", "ACTUAL"))
+setnames(test_preds, c("INDX", "LM", "LM_ROBUST", "STEPWISE", "RIDGE", "LASSO", "ACTUAL", "REAL_ACTUAL"))
 
 head(test_preds, 30)
 
@@ -146,12 +153,16 @@ rm(inds)
 
 ### TO DO 
 ## Diagnostics
-# Residuals
+# Biggest residuals
+test_preds[order(-SSE_LM)][1:10]
 
 
 # Outliers
 test_preds[LM==max(test_preds$LM)]
 data_orig_test[545]
+data_orig_test[652]
+data_orig_test[571]
+
 
 # Boxplot (range of predictions vs range of actual observations)
 
