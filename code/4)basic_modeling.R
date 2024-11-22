@@ -68,8 +68,8 @@ data_orig_train <- final_data[ tt_split,]
 data_orig_test <- final_data[ -tt_split,]
 
 # Scale and center all variables, to improve regression
-data_train <- data_train %>% mutate_all(~(scale(.) %>% as.vector))
-data_test <- data_test %>% mutate_all(~(scale(.) %>% as.vector))
+#data_train <- data_train %>% mutate_all(~(scale(.) %>% as.vector))
+#data_test <- data_test %>% mutate_all(~(scale(.) %>% as.vector))
 
 
 ### Run 2 full regression models (regular LS and robust), for comparison
@@ -125,12 +125,22 @@ lm_lasso_pred <- predict(lm_lasso_cv,
                          s =lm_lasso_cv$lambda.min,
                          data_test[,!"log_price", with=FALSE] |> as.matrix())
 
-set_price <- function(X) {exp(X) * data_orig_test[,mean(price)] |> currency()}
+set_price <- function(X) {exp(X) |> currency()}
 
-unscalePrice <- price * sd(log_price) + mean(log_price)
+# #### TO DO 
+# # Get the Unscale function working properly....
 
-#### TO DO 
-# Get the Unscale function working properly....
+#### SIMPLE EXAMPLE - THIS DOESN'T WORK
+# data_model <- data.table(price=c(250, 275, 300, 375, 1000))
+# data_model[,log_price := log(price)]
+# data_model
+# 
+# data_model <- data_model %>% mutate_all(~(scale(.) %>% as.vector))
+# data_model
+# 
+# data_model[, original_price := exp((log_price * sd(log_price)) + mean(log_price))]
+# data_model
+
 
 ### Compare TEST predictions
 test_preds <- cbind(seq(1:length(lm_pred)), 
