@@ -7,7 +7,7 @@
      - Near_Top_10
      - Host_Listings
      - basically, anything we suspect has "diminishing returns" as X increases....
-
+- We attempted data imputation for "missing" reviews, but that harmed model accuracy significantly
 
 # Variable Selection
 

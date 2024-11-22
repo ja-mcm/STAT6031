@@ -11,8 +11,24 @@ set.seed(111)
 # Get rid of high dimensional dummy variables, just for convenience
 final_data[,c("id", "host_location", "amenities_list", "neighbourhood_cleansed", "host_response_rate", "host_acceptance_rate", "latitude", "longitude"):=NULL]
 
+
+### NOTE --- Imputation led to WAY worse R^2 (.65 --> .56)
+
+# # Impute missing reviews with the median value
+# # We'll be introducing an interaction variable, which will probe whether having MANY high review scores affects price, above & beyond the effect of just having good reviews
+# # So, these records with zero reviews will be left out of that interaction, which makes sense since they have no observations...
+# final_data[, review_scores_rating := replace(review_scores_rating, is.na(review_scores_rating), median(review_scores_rating, na.rm=TRUE))]
+# final_data[, review_scores_accuracy := replace(review_scores_accuracy, is.na(review_scores_accuracy), median(review_scores_accuracy, na.rm=TRUE))]
+# final_data[, review_scores_cleanliness := replace(review_scores_cleanliness, is.na(review_scores_cleanliness), median(review_scores_cleanliness, na.rm=TRUE))]
+# final_data[, review_scores_checkin := replace(review_scores_checkin, is.na(review_scores_checkin), median(review_scores_checkin, na.rm=TRUE))]
+# final_data[, review_scores_communication := replace(review_scores_communication, is.na(review_scores_communication), median(review_scores_communication, na.rm=TRUE))]
+# final_data[, review_scores_location := replace(review_scores_location, is.na(review_scores_location), median(review_scores_location, na.rm=TRUE))]
+# final_data[, review_scores_value := replace(review_scores_value, is.na(review_scores_value), median(review_scores_value, na.rm=TRUE))]
+#final_data[is.na(host_is_superhost), host_is_superhost := 0]
+
 # Get rid of rows with NAs
 final_data <- na.omit(final_data)
+
 
 # Create Dummy Variables
 inds <- unique(final_data$host_response_time)
@@ -24,6 +40,7 @@ inds <- unique(final_data$room_type)
 final_data[, (inds) := lapply(inds, function(x) {ifelse(room_type == x, 1, 0)})]
 final_data[,room_type:=NULL] ### Drop original column
 final_data[,`Shared room`:=NULL] ### drop one dummy column, to avoid perfect collinearity
+
 
 ### Keep a reference dataset
 model_data <- copy(final_data)
@@ -42,9 +59,6 @@ tt_split <- createDataPartition(
 model_data[,log_price := log(price)]
 model_data[,price:=NULL]
 
-# Scale and center all variables, to improve regression
-model_data <- model_data %>% mutate_all(~(scale(.) %>% as.vector))
-
 ## Create scaled and non-scaled datasets 
 # Scaled will be used for regression model/predictions
 # Non-scaled will help us evaluate our predictions
@@ -53,6 +67,9 @@ data_test  <- model_data[-tt_split,]
 data_orig_train <- final_data[ tt_split,]
 data_orig_test <- final_data[ -tt_split,]
 
+# Scale and center all variables, to improve regression
+data_train <- data_train %>% mutate_all(~(scale(.) %>% as.vector))
+data_test <- data_test %>% mutate_all(~(scale(.) %>% as.vector))
 
 
 ### Run 2 full regression models (regular LS and robust), for comparison
@@ -109,6 +126,8 @@ lm_lasso_pred <- predict(lm_lasso_cv,
                          data_test[,!"log_price", with=FALSE] |> as.matrix())
 
 set_price <- function(X) {exp(X) * data_orig_test[,mean(price)] |> currency()}
+
+unscalePrice <- price * sd(log_price) + mean(log_price)
 
 #### TO DO 
 # Get the Unscale function working properly....
