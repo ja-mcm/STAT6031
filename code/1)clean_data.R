@@ -78,7 +78,7 @@ bnb_data[,amenities:=gsub('""','"' , amenities, fixed=TRUE)]
 bnb_data[,amenities_list:=lapply(bnb_data$amenities, function(x) {parse_json(x)})]
 
 # The parsed JSON now lives in a list object, which holds all the individual features for each property
-bnb_data$amenities_list[1:3]
+# bnb_data$amenities_list[1:3]
 
 # Collapse list items into a table, for easier review of what these look like...
 all_amenities <- unlist(bnb_data[, amenities_list])  |> data.table()
@@ -89,7 +89,7 @@ all_amenities <- all_amenities[,.N,by=V1][order(-N)]
 
 # 1) Can we combine similar entries?
 # Coffee has 38 distinct entries...
-all_amenities[V1 %like% "Coffee"]
+# all_amenities[V1 %like% "Coffee"]
 
 # 2) Ignore "sparse" features
 # Of the 2000+ amenities, only 165 apply to at least 1% of the listings (ie. count of 70 or more)

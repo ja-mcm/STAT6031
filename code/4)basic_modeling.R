@@ -41,6 +41,14 @@ final_data[, (inds) := lapply(inds, function(x) {ifelse(room_type == x, 1, 0)})]
 final_data[,room_type:=NULL] ### Drop original column
 final_data[,`Shared room`:=NULL] ### drop one dummy column, to avoid perfect collinearity
 
+final_data[,host_owns_gt_5:=ifelse(host_total_listings_count > 5, 1, 0)]
+final_data[,host_owns_2_5:=ifelse(host_total_listings_count < 5 & host_total_listings_count > 1, 1,0 )]
+final_data[,host_total_listings_count:=NULL]
+
+# Add interaction variable for # of reviews * review 
+# we suspect that the number of high review scores might matter
+final_data[,review_score_ct_interaction:=review_scores_rating * number_of_reviews]
+
 
 ### Keep a reference dataset
 model_data <- copy(final_data)
