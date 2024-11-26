@@ -479,50 +479,6 @@ kable(binary_summary, align = "ccc",
 
 From the table above, we observe that most hosts provide information about their location, include profile pictures, and have verified identities. However, the majority of rentals lack amenities such as patios, backyards, pools, stainless steel appliances, lakeside views, or indoor fireplaces, among other features.
 
-```{r}
-
-### Explore Price
-# -------------------------------------------
-# Inspect distribution of prices
-# Very right-skewed
-#ggplot(final_data,aes(price)) + geom_histogram() + labs(title = "Distribution of AirBNB Prices - New Orleans")
-
-# Log transform isn't perfect either...
-#ggplot(final_data,aes(log(price))) + geom_histogram() + labs(title = "Distribution of log(AirBNB Prices) - New Orleans")
-
-### Correlation Heat Map Attempt
-#set.seed(123)
-
-#numeric_data <- final_data %>%
-#  dplyr::select(-neighbourhood_cleansed, -room_type,
-#                -host_response_time)
-
-#numeric_data <- as_tibble(numeric_data)
-
-#correlation_matrix <- cor(numeric_data)
-
-#correlation_matrix_dt <- as.data.table(as.table(correlation_matrix))
-
-# Melt the correlation matrix for ggplot2
-#cor_melted <- melt(correlation_matrix_dt, na.rm = TRUE)
-
-# Create the heatmap
-#ggplot(cor_melted, aes(V1, V2, fill = value)) +
-#  geom_tile(color = "white") +  # Add white borders to the squares
-#  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-#                       midpoint = 0, limit = c(-1, 1), 
-#                       name = "Correlation") +  # Gradient fill for correlation values
- # geom_text(aes(label = round(value, 2)), color = "black") +  # Add correlation values in squares
- # theme_minimal() +  # Use a minimal theme
-#  labs(title = "Correlation Matrix Heatmap", 
-#       x = "", 
-#       y = "") +  # Remove axis labels
-#  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Angle x-axis labels
-
-
-
-```
-
 # Section 4 - Modeling
 
 After carefully examining the covariates, we proceeded to the modeling phase. The dataset was split into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis.
@@ -590,6 +546,8 @@ data_test[,price:=NULL]
 We first fit a simple linear regression model using log(price) as our dependent variable:
 
 By examining the residuals, we identified opportunities for improvement. As a result, we applied various models chosen through stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.
+
+**(Note** : coefficients for Lasso and Ridge regression were located using cross-validation)
 
 ::: panel-tabset
 ## LM
@@ -919,4 +877,16 @@ Best model is OLS
 
 # Section 5 - Discussion
 
-Type
+Our pricing model did a solid job of predicting \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+The model revealed that the most salient factors that determine an Airbnb listing's price in the New Orleans market were:
+
+-   TBD
+
+-   TBD
+
+-   TBD
+
+-   TBD
+
+An opportunity for further study exists in further supplementing our data to improve predictions. There were many other potential variables related to location that definitely impact prices - CRIME\*, transit, local housing prices.....Some, if not all, of these likely have an open data source (such as the police department) that would let us explore each of these. if we had more time, we would have liked to follow up on at least some of these factors to assess their impact on pricing.
