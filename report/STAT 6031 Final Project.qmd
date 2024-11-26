@@ -7,585 +7,679 @@ format:
     code-fold: true
     results: hide
     toc: true
+    css: custom.css
     embed-resources: true
 editor: visual
 ---
 
 ```{r, message = FALSE, warning = FALSE}
 
-# Load necessary libraries
-
-library(dplyr)
+library(data.table)
 library(ggplot2)
+library(dplyr)
+library(jsonlite)
+library(reshape2)
+library(knitr)
+library(kableExtra)
+library(caret)
 library(MASS)
-library(car)
+library(glmnet)
+library(boot)
+library(scales)
+```
 
-# Load dataset 
+## Section 1 -- Data Description
 
-data(Boston)
-attach(Boston)
+The dataset for this project can be accessed via the following link: <https://insideairbnb.com/get-the-data/>, under section "New Orleans, Louisiana, United States" and under the file "listings.csv.gz."
+
+It contains 7,118 observations and 75 covariates related to Airbnb listings in the New Orleans, Louisiana area. For a detailed description of each covariate, please refer to the following document: <https://docs.google.com/spreadsheets/d/1iWCNJcSutYqpULSQHlNyGInUvHg2BoUGoNRIGa6Szc4/edit?gid=1322284596#gid=1322284596>.
+
+# Section 2 - Data Cleaning
+
+Our analysis aims to predict Airbnb prices in the New Orleans area using various metrics, with "price" serving as the dependent variable. To ensure the quality and reliability of the data, we began by cleaning the dataset. This initial step involved several key tasks, including the removal of dollar signs from the price column and filtering out rows with missing price information.
+
+Further data preparation involved parsing the amenities column, which was in JSON format, to identify potentially significant amenities that could influence price predictions. We also removed rows containing unrealistic price values or listings with zero availability, as these could skew the analysis.
+
+```{r, message = FALSE, warning = FALSE}
+
+raw_data <- fread("Listings_New_Orleans.csv")
+bnb_data <- raw_data
+
+### Remove listings with no price data
+bnb_data <- bnb_data |> mutate(price = as.numeric(gsub("[$,]", "", as.character(price))))
+bnb_data <- bnb_data[nchar(price)>1]  # (!!!) drops roughly 1000 records (!!!)
+
+### Parse Amenities JSON
+
+# Fix up quotes, so we can parse this JSON
+bnb_data[,amenities:=gsub('""','"' , amenities, fixed=TRUE)]
+bnb_data[,amenities_list:=lapply(bnb_data$amenities, function(x) {parse_json(x)})]
+
+# Collapse list items into a table, for easier review of what these look like...
+all_amenities <- unlist(bnb_data[, amenities_list])  |> data.table()
+all_amenities <- all_amenities[,.N,by=V1][order(-N)]
+
+# Potential dummy variables for "significant" amenities
+bnb_data[amenities_list %like% "Long term stays allowed",has_long_term:=1]
+bnb_data[amenities_list %like% "Backyard",has_backyard:=1]
+bnb_data[amenities_list %like% "Patio",has_patio:=1]
+bnb_data[amenities_list %like% "Pool",has_pool:=1]
+bnb_data[amenities_list %like% "Stainless",has_stainless:=1]
+bnb_data[amenities_list %like% "Lake",has_lake:=1]
+bnb_data[amenities_list %like% "Private",has_privacy:=1]
+bnb_data[amenities_list %like% "Window guards",has_window_guards:=1]
+bnb_data[amenities_list %like% "Indoor fireplace",has_indoor_fireplace:=1]
+
+cols <- names(bnb_data)[names(bnb_data) %like% "has" & !names(bnb_data) %in% c("host_has_profile_pic", "has_availability")]
+bnb_data[ , (cols) := lapply(.SD, nafill, fill=0), .SDcols = cols]
+
+### Remove "unrealized" listings - these have anomalous prices AND zero availability
+# Or, not available within the next 365 days.....
+# These are likely to have never had an actual stay and therefore their pricing is not relevant to our model
+high_low <- bnb_data[,quantile(price, probs=c(.025, 0.975))]
+bnb_data <- bnb_data[!(((price>high_low[2] | price<high_low[1]) & availability_30 == 0) | availability_365 == 0)]
+
 
 ```
 
-## Section 1 -- Exploratory Data Analysis
+Next, we proceeded to select the most relevant variables for our analysis. We removed columns containing URLs, IDs, names, descriptions, and overviews, as well as columns with neighborhood information, since we already had latitude and longitude data. Additionally, we eliminated columns with redundant information or those filled entirely with missing values (NAs).
 
-The dataset I will be using for this project is called "Boston Housing Dataset" available at the following link: <https://www.kaggle.com/code/prasadperera/the-boston-housing-dataset/notebook>. It comprises 506 observations and 14 covariates concerning housing in the area of Boston, MA. Below is a description of each variable:
+After removing unnecessary columns, we ensured the data was in a workable format by standardizing missing values, coding them all as NA (as some were empty cells and others were "N/A"). We also converted the boolean columns from "True/False" to 1/0, where 1 corresponded to True and 0 to False. Furthermore, we removed percentage symbols from certain columns to convert them into numeric values.
 
-| Variable | Description |
-|:------------:|:--------------------------------------------------------:|
-| crim | Per capita crime rate by town |
-| zn | Proportion of residential land zoned for lost over 25,000 square feet |
-| indus | Proportion of non-retail business acres per town |
-| chas | Charles River dummy variable (1 if tract bounds river, 0 otherwise) |
-| nox | Nitric oxides concentrations (parts per 10 million) |
-| rm | Average number of rooms per dwelling |
-| age | Proportion of owner-occupied units built prior to 1940 |
-| dis | Weighted distances to five Boston employment centers |
-| rad | Index of accessibility to radial highways |
-| tax | Full-value property-tax rate per \$10,000 |
-| ptratio | Pupil-teacher ratio by town |
-| black | Proportion of blacks by town |
-| lstat | \% lower status of the population |
-| medv | Median value of owner-occupied homes in \$1000's |
+To improve the utility of the data, we modified the "host_since" column to reflect the number of years the host had been active, making it easier to model. In addition to these adjustments, we incorporated spatial data by adding the locations of the top 10 destinations in the area, as listed by TripAdvisor, and created a new column to count the number of points of interest within a 1 km radius of each rental.
 
-: Table 1: Data Description
+With these modifications completed, our \`\`final dataset'' contained 5921 observations and 45 covariates. These cleaning and selection steps ensured that the dataset was both accurate and relevant for building a predictive model for Airbnb pricing in the New Orleans region.
 
-To begin our analysis, we will start with exploratory data analysis. For each covariate, we will examine key statistics, including the mean, median, standard deviation, minimum, maximum, and the number of missing values. The table below summarizes these findings:
+```{r, message = FALSE, warning = FALSE}
+
+# Select useful variables
+
+bnb_data <- bnb_data %>% 
+  dplyr::select(-listing_url, -scrape_id, -last_scraped, -source, -name,
+                -description,-picture_url, -host_id, -host_url, -host_name,
+                -host_about, -host_thumbnail_url, -host_picture_url,
+                -bathrooms_text, -minimum_nights,- maximum_nights,
+                -minimum_minimum_nights, -maximum_minimum_nights,
+                -minimum_maximum_nights, -maximum_maximum_nights,
+                -calendar_updated, -has_availability, -calendar_last_scraped,
+                -first_review, -license, -neighborhood_overview,
+                -host_verifications, -neighbourhood,-neighbourhood_group_cleansed,
+                -property_type, -amenities,-host_listings_count,
+                -host_neighbourhood, -last_review)
+
+# Replace "N/A" and empty with NA in the entire dataset
+bnb_data <- bnb_data %>%
+  mutate(across(where(is.character), ~ na_if(., "N/A"))) %>%
+  mutate(across(where(is.character), ~ na_if(., "")))
+
+## Convert T/F to 1/0 --> true = 1, false = 0
+bnb_data <- bnb_data %>%
+  mutate(across(c(host_is_superhost, host_has_profile_pic, 
+                  host_identity_verified, instant_bookable),
+                ~ if_else(as.character(.) == "t", 1,
+                          if_else(as.character(.) == "f", 0, NA_real_))))
+
+# Modify host_since column to host for x years, easier to model
+bnb_data <- bnb_data %>%
+  mutate(host_since_year = gsub("host since ", "", host_since),
+         host_since_year = as.Date(host_since_year),
+         host_years = ifelse(!is.na(host_since_year),  
+                             as.numeric(format(Sys.Date(), "%Y")) - as.numeric(format(host_since_year, "%Y")),NA)) %>%
+  dplyr::select(-host_since, -host_since_year)
+
+# Code host_location column as 1 if New Orleans, 0 otherwise
+bnb_data <- bnb_data %>%
+  mutate(host_location = if_else(host_location == "New Orleans, LA", 1, 0))
+
+# Remove % symbol and convert to numeric
+bnb_data$host_response_rate <- as.numeric(gsub("%", "",
+                                               bnb_data$host_response_rate))
+bnb_data$host_response_rate <- as.numeric(bnb_data$host_response_rate)
+
+bnb_data$host_acceptance_rate <- as.numeric(gsub("%", "",
+                                                 bnb_data$host_acceptance_rate))
+bnb_data$host_acceptance_rate <- as.numeric(bnb_data$host_acceptance_rate)
+
+## Remove calculated fields - these are duplicative
+cols <- names(bnb_data)[names(bnb_data) %like% "calculated"]
+bnb_data[ , (cols) := NULL]
+
+### Add top 10 destination points from TripAdvisor
+# This is meant to model how good the location of the BNB is....
+# Represented as a count - so "6" means that the listing is within 1 km of 6 different attractions
+### Add top 10 destination points from TripAdvisor
+dest_points <- data.table("Rank" = seq(1:10),
+                          "Location" = c("WW2 Museum", "French Quarter", "Frenchman Street", "Garden District", "Jackson Square", "Preservation Hall", "Mardi Gras World", "St. Louis Cemetary", "New Orleans City Park", "St. Louis Cathedral"),
+                          "Lat" = c(29.943208928864262, 29.959424483411674, 29.964318181205662, 29.928845784748955, 29.95756024289618, 29.958610251707462, 29.941144698995455, 29.959608239041174, 29.993454400417903, 29.95815187771942),
+                          "Long" = c(-90.07057952646183, -90.06491814669677, -90.05773360204412, -90.08380077303872,-90.06294615548948, -90.06534875344381, -90.0621223634231, -90.07117833809907, -90.09813780389588, -90.06370009040566))
+
+
+### Find everything within 1 km of each point
+# Non equi-join (https://www.r-bloggers.com/2021/02/the-unequalled-joy-of-non-equi-joins/)
+
+# Get locations within 1 km of key points (Latitude only)
+near_id <- data.table()
+
+for (i in 1:nrow(dest_points)) {
+  setkey(bnb_data, latitude)
+  setkey(dest_points, Lat)
+  close_lat <- dest_points[i][bnb_data, roll = .01, nomatch = NULL]
+  
+  
+  # Now filter to within 1km - longitude
+  setkey(close_lat, longitude)
+  setkey(dest_points, Long)
+  close_lat_long <- dest_points[i][close_lat, roll = 0.01, nomatch = NULL][,.(id)]
+  
+  near_id <- rbind(near_id, close_lat_long)
+  rm(close_lat)
+  rm(close_lat_long)
+}
+
+### Count up how many points of interest are within 1 km of a given rental
+near_id <- as.data.table(near_id)
+near_id <- near_id[,near_top_10 := .N, by=id]
+
+### Remove some other columns
+bnb_data <- bnb_data %>%
+  dplyr::select(-maximum_nights_avg_ntm, -amenities_list)
+
+# Add this new derived variable back into the main dataset
+bnb_data <- near_id[bnb_data,on="id"]
+bnb_data <- bnb_data[is.na(near_top_10), near_top_10:=0]|> unique()
+
+rm(near_id)
+rm(high_low)
+rm(i)
+rm(all_amenities)
+rm(cols)
+
+bnb_data <- bnb_data %>%
+  dplyr::select(-id)
+
+final_data <- bnb_data
+```
+
+# Section 3 - Exploratory Data Analysis
+
+Once we had a dataset we could work with, our next step was to explore more in depth both binary and non-binary covariates.
+
+For each non-binary covariate, we examined key statistics, including the mean, median, standard deviation, minimum, maximum, and the number of missing values. The table below summarizes these findings:
 
 ```{r, message = FALSE}
 
-## Sample size
-n <- nrow(Boston)
-p <- ncol(Boston)
+### Sample size
+n <- nrow(final_data)
+p <- ncol(final_data)
 
-statistics_summary <- summary(Boston)
-
-sd_crim <- sd(crim)
-sd_zn <- sd(zn)
-sd_indus <- sd(indus)
-sd_chas <- sd(chas)
-sd_nox <- sd(nox)
-sd_rm <- sd(rm)
-sd_age <- sd(age)
-sd_dis <- sd(dis)
-sd_rad <- sd(rad)
-sd_tax <- sd(tax)
-sd_ptratio <- sd(ptratio)
-sd_black <- sd(black)
-sd_lstat <- sd(lstat)
-sd_medv <- sd(medv)
-
-missing_values <- colSums(is.na(Boston))
-```
-
-| Variable |  Mean  | Median | St. Deviation |    (Min, Max)    | Missing Values |
-|:--------:|:------:|:------:|:-------------:|:----------------:|:--------------:|
-|   crim   |  3.61  |  0.26  |     8.60      |  (0.00, 88.98)   |       0        |
-|    zn    | 11.36  |  0.00  |     23.32     |  (0.00,100.00)   |       0        |
-|  indus   | 11.14  |  9.69  |     6.86      |  (0.46, 27.74)   |       0        |
-|   chas   |  0.07  |  0.00  |     0.25      |   (0.00, 1.00)   |       0        |
-|   nox    |  0.55  |  0.54  |     0.12      |   (0.38, 0.87)   |       0        |
-|    rm    |  6.28  |  6.21  |     0.70      |   (3.56, 8.78)   |       0        |
-|   age    | 68.57  | 77.50  |     28.15     |  (2.90, 100.00)  |       0        |
-|   dis    |  3.79  |  3.21  |     2.11      |  (1.13, 12.13)   |       0        |
-|   rad    |  9.55  |  5.00  |     8.71      |  (1.00, 24.00)   |       0        |
-|   tax    | 408.20 | 330.00 |    168.54     | (187.00, 711.00) |       0        |
-| ptratio  | 18.46  | 19.05  |     2.16      |  (12.60, 22.00)  |       0        |
-|  black   | 356.67 | 391.44 |     91.29     |  (0.32, 396.90)  |       0        |
-|  lstat   | 12.65  | 11.36  |     7.14      |  (1.73, 37.97)   |       0        |
-|   medv   | 22.53  | 21.20  |     9.20      |  (5.00, 50.00)   |       0        |
-
-: Summary of Statistics
-
-When reviewing the summary statistics, it is important to note that there are no missing values, which is ideal. Additionally, some covariates show skewness, as evidenced by the mean and median values not being close to each other. Below, you can view the density plots and box-plots for each covariate:
-
-```{r}
-
-par(mfrow = c(2,2))
-
-plot(density(Boston$crim), 
-     main = "Crim Distribution",
-     xlab = "crim",
-     col = "blue")
-
-boxplot((Boston$crim),
-               main = "Crim Distribution")
-
-plot(density(Boston$zn),
-      main = "Zn Distribution",
-     xlab = "zn",
-     col = "blue")
-
-boxplot((Boston$zn),
-        main = "Zn Distribution")
-
-plot(density(Boston$indus),
-      main = "Indus Distribution",
-     xlab = "indus",
-     col = "blue")
-
-boxplot((Boston$indus),
-        main = "Indus Distribution")
-
-plot(density(Boston$chas),
-      main = "Chas Distribution",
-     xlab = "chas",
-     col = "blue")
-
-boxplot((Boston$chas),
-        main = "Chas Distribution")
-
-plot(density(Boston$nox),
-      main = "Nox Distribution",
-     xlab = "nox",
-     col = "blue")
-
-boxplot((Boston$nox),
-        main = "Nox Distribution")
-
-plot(density(Boston$rm),
-      main = "Rm Distribution",
-     xlab = "rm",
-     col = "blue")
-
-boxplot((Boston$rm),
-    main = "Rm Distribution")
-
-plot(density(Boston$age),
-      main = "Age Distribution",
-     xlab = "age",
-     col = "blue")
-
-boxplot((Boston$age),
-         main = "Age Distribution")
-
-plot(density(Boston$dis),
-      main = "Dis Distribution",
-     xlab = "dis",
-     col = "blue")
-
-boxplot((Boston$dis),
-        main = "Dis Distribution")
-
-plot(density(Boston$rad),
-      main = "Rad Distribution",
-     xlab = "rad",
-     col = "blue")
-
-boxplot((Boston$rad),
-        main = "Rad Distribution")
-
-plot(density(Boston$tax),
-      main = "Tax Distribution",
-     xlab = "tax",
-     col = "blue")
-
-boxplot((Boston$tax),
-         main = "Tax Distribution")
-
-plot(density(Boston$ptratio),
-      main = "Ptratio Distriibution",
-     xlab = "ptratio",
-     col = "blue")
-
-boxplot((Boston$ptratio),
-        main = "Ptratio Distribution")
-
-plot(density(Boston$black),
-      main = "Black Distribution",
-     xlab = "black",
-     col = "blue")
-
-boxplot((Boston$black),
-        main = "Black Distribution")
-
-plot(density(Boston$lstat),
-      main = "Lstat Distribution",
-     xlab = "lstat",
-     col = "blue")
-
-boxplot((Boston$lstat),
-        main = "Lstat Distribution")
-
-plot(density(Boston$medv),
-      main = "Medv Distribution",
-     xlab = "medv",
-     col = "blue")
-
-boxplot((Boston$medv),
-        main = "Medv Distribution")
-```
-
-When examining these plots, we can classify the covariates based on their skewness as follows:
-
-| Right Skewed | Left Skewed | Multimodal | \~ Symmetric | Other   |
-|--------------|-------------|------------|--------------|---------|
-| crim         | black       | indus      | rm           | nox     |
-| zn           |             | rad        |              | age     |
-| chas         |             | tax        |              | mdev    |
-| dis          |             |            |              | ptratio |
-| lstat        |             |            |              |         |
-
-: Distribution of Covariates
-
-Additionally, we identify outliers in the following covariates: crim, zn, chas, rm, dis, ptratio, black, lstat, and medv.
-
-```{r, message = FALSE}
-
-# Function to identify outliers using IQR
-identify_outliers_iqr <- function(data) 
+### Report summary statistics
+summary_stats <- function(data)
   {
-    outliers <- lapply(data, function(x) 
+    results <- list()
+    # Loop through each column in the dataset
+    for (col in names(data)) 
       {
-        Q1 <- quantile(x, 0.25)
-        Q3 <- quantile(x, 0.75)
-        IQR <- Q3 - Q1
-        lower_bound <- Q1 - 1.5 * IQR
-        upper_bound <- Q3 + 1.5 * IQR
-        return(which(x < lower_bound | x > upper_bound))
-      })
-    return(outliers)
+        # Check if the column is numeric and not binary
+        unique_values <- unique(na.omit(data[[col]]))
+        if (is.numeric(data[[col]]) && length(unique_values) > 2)
+          {
+            # Calculate summary statistics
+            summary_stats <- c(Mean = round(mean(data[[col]], na.rm = TRUE), 3),
+                               Median = round(median(data[[col]], na.rm = TRUE), 3),
+                               SD = round(sd(data[[col]], na.rm = TRUE), 3),
+                               Min = round(min(data[[col]], na.rm = TRUE), 3),
+                               Max = round(max(data[[col]], na.rm = TRUE), 3),
+                               NAs = sum(is.na(data[[col]])))
+      
+            # Store the results in a list
+            results[[col]] <- summary_stats
+          } 
+        else 
+          {
+            message(paste("Skipping binary or non-numeric column:", col))
+          }
+      }
+  
+    # Convert the list to a data frame for easier viewing
+    results_df <- as.data.frame(do.call(rbind, results))
+    return(results_df)
   }
 
-# Identify outliers
-outliers_iqr <- identify_outliers_iqr(Boston)
+nonbinary_summary <- summary_stats(final_data)
 
 ```
 
-We should also be interested in the pairwise relationships between the variable we want to predict and the covariates in the dataset. In our case, the varaible we want to predict is "medv". To observe the relationship between "medv" and the rest of the covariates more closely, look at the plots below:
+```{r}
+
+# Create a kable table and center the text in the cells
+kable(nonbinary_summary, 
+      caption = "Summary Statistics for Numeric Variables",
+      format = "html") 
+
+
+```
+
+Additionally, we also looked at their distribution by creating boxplots and density plots:
+
+```{r}
+
+## Look at density plots and boxplots of non-binary variables
+
+create_plots <- function(data) {
+  # Loop through each column in the dataset
+  for (col in names(data)) {
+    # Check if the column is numeric and not binary (contains values other than 0 and 1)
+    unique_values <- unique(na.omit(data[[col]]))
+    if (is.numeric(data[[col]]) && length(unique_values) > 2) {
+      # Create boxplot
+      boxplot(data[[col]], main = paste("Boxplot"), xlab = col, col = "lightblue")
+      
+      # Create density plot
+      plot(density(data[[col]], na.rm = TRUE), main = paste("Density Plot"), xlab = col, col = "lightgreen")
+    } 
+  }
+}
+
+```
 
 ::: panel-tabset
-## Correlation Plot 1
+## 1
 
 ```{r}
-library(dplyr)
 
-Boston <- as_tibble(Boston)
+par(mfrow = c(2, 4), mar = c(3, 3, 2, 1),
+    mgp = c(1.25, 0.5, 0),
+    cex.lab = 0.9, cex.main = 0.8)
 
-Boston_1 <- Boston %>%
-  dplyr::select(medv, crim, zn, indus, chas, nox, rm, age)
+selected_columns_1 <- final_data %>%
+  dplyr::select(near_top_10, host_response_rate, host_acceptance_rate,
+         host_total_listings_count)
 
-pairs(medv ~ ., data = Boston_1, main = "Scatterplot Matrix")
+create_plots(selected_columns_1)
 ```
 
-## Correlation Plot 2
+## 2
 
 ```{r}
 
-Boston_2 <- Boston %>%
-  dplyr::select(medv, dis, rad, tax, ptratio, black, lstat)
+par(mfrow = c(2, 4), mar = c(3, 3, 2, 1),
+    mgp = c(1.25, 0.5, 0),
+    cex.lab = 0.9, cex.main = 0.8)
 
-pairs(medv ~ ., data = Boston_2, main = "Scatterplot Matrix")
+selected_columns_2 <- final_data %>%
+  dplyr::select(latitude, longitude, accommodates, bathrooms)
+
+create_plots(selected_columns_2)
 ```
 
-## Heat Map of Correlation
+## 3
 
 ```{r}
 
-library(ggplot2)
-library(reshape2)
+par(mfrow = c(2, 4), mar = c(3, 3, 2, 1),
+    mgp = c(1.25, 0.5, 0),
+    cex.lab = 0.9, cex.main = 0.8)
 
-# Example dataset: replace this with your actual dataset
+selected_columns_3 <- final_data %>%
+  dplyr::select(bedrooms, beds, price, minimum_nights_avg_ntm)
+
+create_plots(selected_columns_3)
+```
+
+## 4
+
+```{r}
+
+par(mfrow = c(2, 4), mar = c(3, 3, 2, 1),
+    mgp = c(1.25, 0.5, 0),
+    cex.lab = 0.9, cex.main = 0.8)
+
+selected_columns_4 <- final_data %>%
+  dplyr::select(availability_30, availability_60, availability_90,
+         availability_365)
+
+create_plots(selected_columns_4)
+```
+
+## 5
+
+```{r}
+
+par(mfrow = c(2, 4), mar = c(3, 3, 2, 1),
+    mgp = c(1.25, 0.5, 0),
+    cex.lab = 0.9, cex.main = 0.8)
+
+selected_columns_5 <- final_data %>%
+  dplyr::select(number_of_reviews, number_of_reviews_ltm,
+         number_of_reviews_l30d, review_scores_rating)
+
+create_plots(selected_columns_5)
+```
+
+## 6
+
+```{r}
+
+par(mfrow = c(2, 4), mar = c(3, 3, 2, 1),
+    mgp = c(1.25, 0.5, 0),
+    cex.lab = 0.9, cex.main = 0.8)
+
+selected_columns_6 <- final_data %>%
+  dplyr::select(review_scores_accuracy, review_scores_cleanliness,
+         review_scores_checkin, review_scores_communication)
+
+create_plots(selected_columns_6)
+```
+
+## 7
+
+```{r}
+
+par(mfrow = c(2, 4), mar = c(3, 3, 2, 1),
+    mgp = c(1.25, 0.5, 0),
+    cex.lab = 0.9, cex.main = 0.8)
+
+selected_columns_7 <- final_data %>%
+  dplyr::select(review_scores_location, review_scores_value,
+         reviews_per_month, host_years)
+
+create_plots(selected_columns_7)
+```
+:::
+
+From the summary statistics and the distribution above, we observe that most of our covariates are skewed and multimodal.
+
+Additionally, taking a closer look at our dependent variable price, we might want to consider some sort of transformation.
+
+Look at outliers?
+
+Regarding the binary variables, we looked at the percentage of 1s and 0s:
+
+```{r}
+
+### Report % of binary variables
+report_binary_percentages <- function(data) {
+  # Initialize an empty list to store results
+  results <- list()
+  
+  # Loop through each column in the dataset
+  for (col in names(data)) {
+    # Check if the column is binary (contains only 0s, 1s, or NA values)
+    unique_values <- unique(na.omit(data[[col]]))
+    if (all(unique_values %in% c(0, 1))) {
+      # Calculate the percentages of 0s and 1s, ignoring NAs
+      percent_1 <- mean(data[[col]] == 1, na.rm = TRUE) * 100
+      percent_0 <- mean(data[[col]] == 0, na.rm = TRUE) * 100
+      
+      # Store the results in a list
+      results[[col]] <- c(`% of 1s` = percent_1, `% of 0s` = percent_0)
+    }
+  }
+  
+  # Convert the list to a data frame for easier viewing
+  results_df <- as.data.frame(do.call(rbind, results))
+  return(results_df)
+}
+
+binary_summary <- report_binary_percentages(final_data)
+
+```
+
+```{r}
+
+# Create a kable table and center the text in the cells
+kable(binary_summary, 
+      caption = "Summary Statistics for Binary Variables",
+      format = "html")
+
+```
+
+From the table above, we observe that most hosts provide information about their location, include profile pictures, and have verified identities. However, the majority of rentals lack amenities such as patios, backyards, pools, stainless steel appliances, lakeside views, or indoor fireplaces, among other features.
+
+Correlation??
+
+```{r}
+
+### Explore Price
+# -------------------------------------------
+# Inspect distribution of prices
+# Very right-skewed
+ggplot(final_data,aes(price)) + geom_histogram() + labs(title = "Distribution of AirBNB Prices - New Orleans")
+
+# Log transform isn't perfect either...
+ggplot(final_data,aes(log(price))) + geom_histogram() + labs(title = "Distribution of log(AirBNB Prices) - New Orleans")
+
+### Correlation Heat Map Attempt
 set.seed(123)
 
-#Boston <- Boston %>% dplyr::select(-medv_boxcox)
+#numeric_data <- final_data %>%
+#  dplyr::select(-neighbourhood_cleansed, -room_type,
+#                -host_response_time)
 
-# Calculate the correlation matrix
-correlation_matrix <- cor(Boston)
+#numeric_data <- as_tibble(numeric_data)
+
+#correlation_matrix <- cor(numeric_data)
+
+#correlation_matrix_dt <- as.data.table(as.table(correlation_matrix))
 
 # Melt the correlation matrix for ggplot2
-cor_melted <- melt(correlation_matrix)
+#cor_melted <- melt(correlation_matrix_dt, na.rm = TRUE)
 
 # Create the heatmap
-ggplot(cor_melted, aes(Var1, Var2, fill = value)) +
-  geom_tile(color = "white") +  # Add white borders to the squares
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-                       midpoint = 0, limit = c(-1, 1), 
-                       name = "Correlation") +  # Gradient fill for correlation values
-  geom_text(aes(label = round(value, 2)), color = "black") +  # Add correlation values in squares
-  theme_minimal() +  # Use a minimal theme
-  labs(title = "Correlation Matrix Heatmap", 
-       x = "", 
-       y = "") +  # Remove axis labels
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Angle x-axis labels
+#ggplot(cor_melted, aes(V1, V2, fill = value)) +
+#  geom_tile(color = "white") +  # Add white borders to the squares
+#  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+#                       midpoint = 0, limit = c(-1, 1), 
+#                       name = "Correlation") +  # Gradient fill for correlation values
+ # geom_text(aes(label = round(value, 2)), color = "black") +  # Add correlation values in squares
+ # theme_minimal() +  # Use a minimal theme
+#  labs(title = "Correlation Matrix Heatmap", 
+#       x = "", 
+#       y = "") +  # Remove axis labels
+#  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Angle x-axis labels
+
+
+
 ```
-:::
 
-By looking at the correlation plots, we can observe that there is a strong positive correlation between medv and tax and a strong negative correlation between medv and lstat.
+# Section 4 - Modeling
 
-Additionally, rad and tax have a a correlation of 0.91, so they are strongly correlated to each other. When doing model selection, we should not select both of them together for trainig the model due to a variance inflation, confounding effects and multicollinearity. The same applies to dis and age, with a correlation of -0.75 and to nox and age, with a correlation of -0.77.
-
-# Section 2 - Regression
-
-After completing the exploratory data analysis, the next step is to fit a simple linear regression model to our data. While we could choose any continuous variable as the response, the primary goal of many analyses on this dataset is to predict housing prices. Therefore, we will use "medv" (median home value) as the response variable and fit the following model:
-
-$$\text{medv} \text{~} \text{crim} + \text{zn} + \text{indus} + \text{chas} + \text{nox} + \text{rm} + \text{age} + \text{dis} + \text{rad} + \text{rad} + \text{ptratio} + \text{lstat} + \text{black}
-$$
-
-The goal of fitting any model to our data is to draw meaningful conclusions from our analysis. However, to do this effectively, we must ensure that the model is correctly specified and that there are no underlying patterns we do not want. One way to check the model's validity is by examining the residual plots shown below:
+After taking a closer look at the covariates, we then began our modeling step. We divided the dataset into a training set (80%) and a testing set (20%).
 
 ```{r}
 
+set.seed(111)
 
-# Fit a linear regression model with all the predictors
-full_model <- lm(medv ~ crim + zn + indus + chas + nox + rm + age + dis + rad  + ptratio + black + lstat, data = Boston)
+# Get rid of high dimensional dummy variables, just for convenience
+final_data[,c("host_location", "neighbourhood_cleansed", "host_response_rate", "host_acceptance_rate", "latitude", "longitude"):=NULL]
 
-par(mfrow = c(2, 2))
-plot(full_model)
+# I would keep host location, response and acceptance rate, latitude and longitude
 
-vif_values <- vif(full_model)
+# Get rid of rows with NAs
+final_data <- na.omit(final_data)
+
+
+# Create Dummy Variables
+inds <- unique(final_data$host_response_time)
+final_data[, (inds) := lapply(inds, function(x) {ifelse(host_response_time == x, 1, 0)})]
+final_data[,host_response_time:=NULL] ### Drop original column
+final_data[,`a few days or more`:=NULL] ### drop one dummy column, to avoid perfect collinearity
+
+inds <- unique(final_data$room_type)
+final_data[, (inds) := lapply(inds, function(x) {ifelse(room_type == x, 1, 0)})]
+final_data[,room_type:=NULL] ### Drop original column
+final_data[,`Shared room`:=NULL] ### drop one dummy column, to avoid perfect collinearity
+
+final_data[,host_owns_gt_5:=ifelse(host_total_listings_count > 5, 1, 0)]
+final_data[,host_owns_2_5:=ifelse(host_total_listings_count < 5 & host_total_listings_count > 1, 1,0 )]
+final_data[,host_total_listings_count:=NULL]
+
+# Add interaction variable for # of reviews * review 
+# we suspect that the number of high review scores might matter
+final_data[,review_score_ct_interaction:=review_scores_rating * number_of_reviews]
+
+
+### Keep a reference dataset
+model_data <- copy(final_data)
 
 ```
 
-From the residuals vs. fitted values plot above, we can see that the residuals have a mean close to zero, which is expected. However, the QQ-plot indicates the presence of heavy tails, suggesting that the assumption of normality might not be fully met.
+```{r}
 
-To address the issue of heavy tails, common transformations include the log transformation and the Box-Cox transformation:
+### Set up train/test split
+tt_split <- createDataPartition(
+  y = model_data$price,
+  p = .80, ## The percentage of data in the training set
+  list = FALSE
+)
+
+data_train <- model_data[ tt_split,]
+data_test <- model_data[ -tt_split,]
+```
+
+We first fitted a simple linear regression model using log(price) as our dependent variable:
+
+```{r}
+
+# scale price by log, to make the right-skewed distribution look more normal
+data_train[,log_price := log(price)]
+data_train[,price:=NULL]
+
+data_test[,log_price := log(price)]
+data_test[,price:=NULL]
+
+```
+
+```{r}
+
+# Fit model
+simple_lm <- lm(log_price~.,data=data_train)
+
+par(mfrow = c(2,2))
+plot(simple_lm)
+```
+
+By looking at the residuals, we realized that there was room for improvement, so we decided to run several different models selected using stepwise selection, lasso and ridge regression.
 
 ::: panel-tabset
-## Log-Transformation
+## Stepwise
 
 ```{r}
 
-log_model <- lm(log(medv) ~ ., data = Boston)
+null_model <- lm(log_price ~ 1, data = data_train[complete.cases(data_train)])
+full_model <- lm(log_price ~ ., data = data_train[complete.cases(data_train)])
 
-par(mfrow = c(2, 2))
-
-plot(log_model)
-```
-
-## Box-Cox Transformation
-
-```{r}
-
-boxcox_results <- boxcox(full_model, lambda = seq(-3,3, length = 31), interp=F)
-
-optimal_lambda <- boxcox_results$x[which.max(boxcox_results$y)]
-
-# Transform the response variable using the optimal lambda
-if (optimal_lambda == 0) 
-  {
-    Boston$medv_boxcox <- log(Boston$medv)
-  } else {
-    Boston$medv_boxcox <- (Boston$medv^optimal_lambda - 1) / optimal_lambda
-  }
-
-# Fit the model with the transformed response variable
-boxcox_model <- lm(medv_boxcox ~ ., data = Boston)
-boxcox_model_summary <- summary(boxcox_model)
+lm_step <- step(null_model, scope = list(lower = null_model, 
+                                         upper = full_model),
+                       k = log(nrow(data_train)), trace = F)
 
 par(mfrow = c(2,2))
-plot(boxcox_model)
+plot(lm_step)
+
+```
+
+## Lasso
+
+```{r}
+
+lm_lasso_cv<-cv.glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
+                         data_train[,log_price] |> as.matrix(),
+                         alpha=1,
+                         lambda=10^seq(-2,log10(exp(4)),length=101),
+                         nfolds=10)
+#coef(lm_lasso_cv, lm_lasso_cv$lambda.min)
+par(mfrow = c(2,2))
+plot(lm_lasso_cv)
+
+```
+
+## Ridge
+
+```{r}
+
+lm_ridge_cv<-cv.glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
+                             data_train[,log_price] |> as.matrix(),
+                             alpha=0,
+                             lambda=10^seq(-2,log10(exp(4)),length=101),
+                             nfolds=10)
+
+#coef(lm_ridge_cv, s=lm_ridge_cv$lambda.min)
+par(mfrow = c(2,2))
+plot(lm_ridge_cv)
+
 ```
 :::
 
-By examining the residuals of both transformations, we can observe that both QQ-plots have heavy tails, suggesting that the assumptions might not be met. The next step is to consider a polynomial model:
+Once we had examined their in sample performance, we looked at their out-of-sample performance:
 
 ```{r}
 
-polynomial_model <- lm(medv ~ crim + zn + indus + chas + nox + dis + rm +
-                         age + rad + tax + ptratio + black +lstat + rm^2 + lstat^2,
-                       data = Boston)
+lm_pred <- predict(simple_lm, data_test)
+lm_step_pred <- predict(lm_step,data_test)
+lm_ridge_pred <- predict(lm_ridge_cv,
+                         s =lm_ridge_cv$lambda.min,
+                         data_test[,!"log_price", with=FALSE] |> as.matrix())
+lm_lasso_pred <- predict(lm_lasso_cv,
+                         s =lm_lasso_cv$lambda.min,
+                         data_test[,!"log_price", with=FALSE] |> as.matrix())
 
-par(mfrow = c(2,2))
-plot(polynomial_model)
-```
-
-By looking at the plot above, we can observe that there are still heavy tails on the QQ plot of the resiudlas, therefore, we can keep looking for a better model.
-
-The next option to consider are Generalized Additive Models (GAMs), and the analysis is shown below:
-
-```{r}
-
-library(mgcv)   # for GAM modeling
-
-# Fit the GAM model treating 'chas' as a linear predictor
-gam_model <- gam(medv ~ s(crim, k = 5) +  s(zn, k = 3) + s(indus, k = 5) + chas + 
-                   s(nox, k = 5) + s(dis, k = 5) + s(rm, k = 5) + s(age, k = 5) + 
-                   s(rad, k = 5) + s(tax, k = 5) + s(ptratio, k = 5) + 
-                   s(black, k = 5) + s(lstat, k = 5), data = Boston)
-
-# Extract residuals
-residuals_gam <- residuals(gam_model)
-fitted_values <- fitted(gam_model)
-
-model_matrix <- model.matrix(gam_model)  # Get the model matrix
-n <- nrow(model_matrix)                   # Number of observations
-p <- ncol(model_matrix) 
-
-standardized_residuals <- residuals_gam / sd(residuals_gam)
-hat_values <- diag(model_matrix %*% solve(t(model_matrix) %*% model_matrix) %*% t(model_matrix))
-
-# Histogram of residuals
-hist(residuals_gam, 
-     main = "Histogram of Residuals", 
-     xlab = "Residuals", 
-     breaks = 30, 
-     col = "lightblue")
-
-# Check diagnostics
-par(mfrow = c(2, 2))
-
-# Plot residuals vs fitted values
-plot(fitted(gam_model), residuals_gam, 
-     xlab = "Fitted Values", 
-     ylab = "Residuals", 
-     main = "Residuals vs Fitted Values")
-abline(h = 0, col = "red", lty = 2)  # Add a horizontal line at 0
-
-# Create Q-Q plot
-qqnorm(residuals_gam, main = "Q-Q Plot of Residuals")
-qqline(residuals_gam, col = "red")  # Add a Q-Q line
-
-# Create Scale-Location plot
-plot(fitted_values, standardized_residuals, 
-     xlab = "Fitted Values", 
-     ylab = "Standardized Residuals", 
-     main = "Scale-Location Plot")
-abline(h = 0, col = "red", lty = 2)
-
-# Create Residuals vs. Leverage plot
-plot(hat_values, standardized_residuals, 
-     xlab = "Leverage", 
-     ylab = "Standardized Residuals", 
-     main = "Residuals vs. Leverage Plot")
-abline(h = 0, col = "red", lty = 2)
-```
-
-By looking a the plot above, we can see that all residuals behave better, so we can cocnlude that the normality assumtions are met in this model.
-
-Now, let's identify the best model using stepwise selection. After running the code in R, the output reveals that the optimal model is:
-
-```{r}
-
-
-
-# Load libraries
-library(mgcv)
-library(boot)
-
-# Set a seed for reproducibility
-set.seed(123)
-
-# Create a custom function to fit the GAM model
-fit_gam <- function(data, indices) {
-  # Create training set
-  train_data <- data[indices, ]
-  
-  # Fit the GAM model
-  gam_model <- gam(medv ~ s(crim, k = 5) + s(zn, k = 3) + 
-                   s(indus, k = 5) + chas + 
-                   s(nox, k = 5) + s(dis, k = 5) + 
-                   s(rm, k = 5) + s(age, k = 5) + 
-                   s(rad, k = 5) + s(tax, k = 5) + 
-                   s(ptratio, k = 5) + 
-                   s(black, k = 5) + s(lstat, k = 5), 
-                   data = train_data)
-  
-  return(gam_model)
+# Define custom function to format as currency without using currency function
+set_price <- function(X) {
+  formatted_price <- sprintf("$%.2f", exp(X))  # Format the exp(X) result as currency
+  return(formatted_price)
 }
 
-# Create the k-fold cross-validation indices
-k_folds <- 5
-n <- nrow(Boston)
-folds <- cut(seq(1, n), breaks = k_folds, labels = FALSE)
+#set_price <- function(X) {exp(X) |> scales::currency()}
 
-# Store results for each fold
-cv_results <- vector("list", k_folds)
 
-# Perform k-fold cross-validation
-for (i in 1:k_folds) {
-  # Split data into training and test sets
-  test_indices <- which(folds == i, arr.ind = TRUE)
-  train_indices <- which(folds != i, arr.ind = TRUE)
-  
-  # Fit the model on the training set
-  model <- fit_gam(Boston, train_indices)
-  
-  # Predict on the test set
-  test_data <- Boston[test_indices, ]
-  predictions <- predict(model, newdata = test_data)
-  
-  # Calculate RMSE for this fold
-  rmse <- sqrt(mean((test_data$medv - predictions)^2))
-  
-  # Store the RMSE result
-  cv_results[[i]] <- rmse
-}
+### Compare TEST predictions
+test_preds <- cbind(seq(1:length(lm_pred)), 
+                    set_price(lm_pred),
+                    1,
+                    set_price(lm_step_pred), 
+                    set_price(lm_ridge_pred), 
+                    set_price(lm_lasso_pred),
+                    set_price(data_test$log_price)) |> as.data.table()
+test_preds <- test_preds[!is.na(V1)]
+setnames(test_preds, c("INDX", "LM", "LM_ROBUST", "STEPWISE", "RIDGE", "LASSO", "ACTUAL"))
 
-# Calculate and print the average RMSE across folds
-average_rmse <- mean(unlist(cv_results))
-cat("Average RMSE across", k_folds, "folds:", average_rmse, "\n")
+head(test_preds, 30)
 
+
+#test_preds[,SSE_LM:=(LM-ACTUAL)^2]
+#test_preds[,SSE_STEPWISE:=(STEPWISE-ACTUAL)^2]
+#test_preds[,SSE_RIDGE:=(RIDGE-ACTUAL)^2]
+#test_preds[,SSE_LASSO:=(LASSO-ACTUAL)^2]
+
+### RMSE of predictions
+# Based on test predictions, the ridge method wins!
+#test_preds[,sqrt(sum(SSE_LM))/.N]
+#test_preds[,sqrt(sum(SSE_STEPWISE))/.N]
+#test_preds[,sqrt(sum(SSE_RIDGE))/.N]
+#test_preds[,sqrt(sum(SSE_LASSO))/.N]
+
+#Variable cleanup
+#rm(all_amenities)
+#rm(dest_points)
+#rm(filtered_data)
+#rm(null_model)
+#rm(full_model)
+#rm(tt_split)
+#rm(cols)
+#rm(inds)
+
+
+### TO DO 
+## Diagnostics
+# Biggest residuals
+
+#test_preds[order(-SSE_LM)][1:10]
+
+
+# Outliers
+#test_preds[LM==max(test_preds$LM)]
+#data_orig_test[545]
+#data_orig_test[652]
+#data_orig_test[571]
 
 ```
-
-```{r}
-
-library(mgcv)
-
-# Split data into training and testing
-sample_index <- sample(nrow(Boston), nrow(Boston)*0.80, replace = FALSE) 
-Boston.train <- Boston[sample_index,] 
-Boston.test <- Boston[-sample_index,] 
-
-```
-
-```{r}
-
-# In-sample fit (prediction), training data
-yhat_train <- predict(object = full_model, newdata = Boston.train)
-
-# In-sample average sum squared error (ASE)
-ase_insample <- mean(full_model$residuals^2)
-
-# In-sample mean squared error (MSE)
-MSE_insample <- sum(full_model$residuals^2) / 390
-summary(full_model)$sigma^2
-
-# Make predictions on testing data
-yhat_test <- predict(full_model, newdata = Boston.test)
-
-# Out-of-sample MSPE
-MSPE_outsample <- mean((Boston.test$medv - yhat_test)^2)
-
-# Stepwise variable selection with BIC
-null_model <- lm(medv ~ 1, data = Boston.train)
-full_model <- lm(medv ~ ., data = Boston.train)
-
-model_step_bic <- step(null_model, scope = list(lower = null_model,
-                                                upper = full_model),
-                       k = log(nrow(Boston.train)), trace = F)
-
-step_bic_model_summary <- summary(model_step_bic)
-
-### Report the corresponding in-sample model MSE and in-sample model ASE and save it as "MSE.stepBIC" and "ASE.stepBIC".
-
-# In-sample fit (prediction), training data
-yhat_BIC <- predict(object = model_step_bic, newdata = Boston.train)
-
-# In-sample average sum squared error (ASE)
-ASE.stepBIC <- mean(model_step_bic$residuals^2)
-
-# In-sample mean squared error (MSE)
-
-MSE.stepBIC <- summary(model_step_bic)$sigma^2
-sum(model_step_bic$residuals^2) / 396 # (n-6-1)
-
-# Make predictions on testing data
-yhat_test_BIC <- predict(model_step_bic, newdata = Boston.test)
-
-# Out-of-sample MSPE
-MSPE.stepBIC <- mean((Boston.test$medv - yhat_test_BIC)^2)
-
-# Plot model
-par(mfrow = c(2, 2))
-plot(model_step_bic)
-```
-
-MSPE, PREDICTION INTERVAL, 95% PREDICTION INTERVAL HAVE THE MOST TESTING POINTS ON THEM (CVG)
-
-CHECK THE UNCERTAINTY FOR EACH OF THEM
-
-cvg coverage
-
-mspe AND CVG
