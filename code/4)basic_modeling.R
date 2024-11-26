@@ -162,8 +162,10 @@ lm_lasso_pred_Train <- predict(lm_lasso_cv,
                          s =lm_lasso_cv$lambda.min,
                          data_train[,!"log_price", with=FALSE] |> as.matrix())
 
+data_orig_train[,LASSO_ERROR:= exp(lm_lasso_pred_Train) - exp(data_train$log_price) ]
+data_orig_train[,LASSO_SIGN:= ifelse(LASSO_ERROR>0,1,-1)]
 data_orig_test[,LASSO_ERROR:= test_preds$LASSO_ERROR]
-data_orig_train[,LASSO_ERROR:= exp(lm_lasso_pred_Train - data_train$log_price) ]
+data_orig_test[,LASSO_SIGN:= ifelse(LASSO_ERROR>0,1,-1)]
 
 
 ### RMSE of predictions

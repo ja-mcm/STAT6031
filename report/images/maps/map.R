@@ -84,9 +84,13 @@ plot_NO +
   coord_sf(xlim = c(-90.14,-90.0), 
            ylim = c(29.9, 30.0),
            expand = FALSE)  +
-  labs(title = "NEW ORLEANS", subtitle = "Model Errors (TRAINING DATA)") +
-  geom_point(data=data_orig_train,aes(x=longitude, y=latitude, colour = log(LASSO_ERROR), size=LASSO_ERROR), cex=0.6) +
-  scale_colour_gradient2(low = "red",mid = "grey", high = "green") +
+  labs(title = "NEW ORLEANS", subtitle = "Over/Underestimates (TRAINING DATA)") +
+  geom_point(data=data_orig_train,aes(x=longitude, y=latitude, colour = log(abs(LASSO_ERROR))*LASSO_SIGN), cex=0.3) +
+  scale_color_gradient2(
+    low = "red", high = "green", mid = "grey70",
+    breaks=c(-2.5,0,2.5),
+    limits=c(-2.5, 2.5),
+    midpoint = 0) +
   theme(legend.position="none")
 
 ### PREDICTION ERROR
@@ -94,7 +98,11 @@ plot_NO +
   coord_sf(xlim = c(-90.14,-90.0), 
            ylim = c(29.9, 30.0),
            expand = FALSE)  +
-  labs(title = "NEW ORLEANS", subtitle = "Model Errors (TEST DATA)") +
-  geom_point(data=data_orig_test,aes(x=longitude, y=latitude, colour = log(LASSO_ERROR), size=LASSO_ERROR), cex=0.6) +
-  scale_colour_gradient2(low = "red",mid = "grey", high = "green") +
-theme(legend.position="none")
+  labs(title = "NEW ORLEANS", subtitle = "Over/Underestimates (TEST DATA)") +
+  geom_point(data=data_orig_test,aes(x=longitude, y=latitude, colour = log(abs(LASSO_ERROR))*LASSO_SIGN), cex=0.6) +
+  scale_color_gradient2(
+    low = "red", high = "green", mid = "grey70",
+    breaks=c(-2.5,0,2.5),
+    limits=c(-2.5, 2.5),
+    midpoint = 0) +
+  theme(legend.position="none")

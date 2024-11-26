@@ -30,9 +30,9 @@
 
 ### Discuss
 - Removed invalid entries
-  - No price (-1149 rows)
+  - No price (-1,149 rows)
   - Not an open listing (-48 rows)
-  - No reviews ()
+  - No reviews (-1,673 rows)
   - Went from __7,118__ rows of data to __4,248__ rows
 
 - REMOVED unusable columns
