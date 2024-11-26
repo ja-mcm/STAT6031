@@ -4,8 +4,7 @@
 
 # Slide 2: OUR CITY: New Orleans
 ### Visuals:
-- Map (orange dots)
-- Map (TripAdvisor)?
+- Picture of French Quarter
 
 
 ### Some stats for presentation:
@@ -26,7 +25,8 @@
 
 # Slide 3: OUR DATA
 ### Visuals: 
-- TBD
+- Map (orange dots)
+- Map (TripAdvisor)?
 
 ### Discuss
 - Removed invalid entries
@@ -82,5 +82,5 @@
 - What we learned
   - Beware of messy data (large impact on prediction accuracy)
   - 
-- Other potential variables - CRIME, transit, local housing prices.....
-- 
+  - Go to the French Quarter!
+- Other potential variables - CRIME*, transit, local housing prices.....

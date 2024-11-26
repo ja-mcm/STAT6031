@@ -3,13 +3,14 @@ library(caret)
 library(MASS)
 library(glmnet)
 library(boot)
+library(formattable)
 
 
 ### For reproducibility
 set.seed(111)
 
 # Get rid of high dimensional dummy variables, just for convenience
-final_data[,c("id", "host_location", "amenities_list", "neighbourhood_cleansed", "host_response_rate", "host_acceptance_rate", "latitude", "longitude"):=NULL]
+final_data[,c("id", "host_location", "amenities_list", "neighbourhood_cleansed", "host_response_rate", "host_acceptance_rate"):=NULL]
 
 
 ### NOTE --- Imputation led to WAY worse R^2 (.65 --> .56)
@@ -74,6 +75,10 @@ data_train <- model_data[ tt_split,]
 data_test  <- model_data[-tt_split,]
 data_orig_train <- final_data[ tt_split,]
 data_orig_test <- final_data[ -tt_split,]
+
+data_test[,c("latitude", "longitude"):=NULL]
+data_train[,c("latitude", "longitude"):=NULL]
+
 
 ### Run 2 full regression models (regular LS and robust), for comparison
 lm <- lm(log_price~.,data=data_train)
@@ -150,13 +155,24 @@ test_preds[,SSE_LM:=(LM-ACTUAL)^2]
 test_preds[,SSE_STEPWISE:=(STEPWISE-ACTUAL)^2]
 test_preds[,SSE_RIDGE:=(RIDGE-ACTUAL)^2]
 test_preds[,SSE_LASSO:=(LASSO-ACTUAL)^2]
+test_preds[,LASSO_ERROR:=(LASSO-ACTUAL)]
+
+
+lm_lasso_pred_Train <- predict(lm_lasso_cv,
+                         s =lm_lasso_cv$lambda.min,
+                         data_train[,!"log_price", with=FALSE] |> as.matrix())
+
+data_orig_test[,LASSO_ERROR:= test_preds$LASSO_ERROR]
+data_orig_train[,LASSO_ERROR:= exp(lm_lasso_pred_Train - data_train$log_price) ]
+
 
 ### RMSE of predictions
-# Based on test predictions, the ridge method wins!
+# Based on test predictions, the lasso method wins!
 test_preds[,sqrt(sum(SSE_LM))/.N]
 test_preds[,sqrt(sum(SSE_STEPWISE))/.N]
 test_preds[,sqrt(sum(SSE_RIDGE))/.N]
 test_preds[,sqrt(sum(SSE_LASSO))/.N]
+
 
 #Variable cleanup
 rm(all_amenities)
@@ -183,4 +199,4 @@ data_orig_test[571]
 
 
 # Boxplot (range of predictions vs range of actual observations)
-
+boxplot(data_orig_test$LASSO_ERROR)

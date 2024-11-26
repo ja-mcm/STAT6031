@@ -1,4 +1,4 @@
-libary(osmdata)
+library(osmdata)
 
 ### BE SURE TO RUN 
 # - 1)clean_data.R to load a cleaned dataset
@@ -75,3 +75,26 @@ plot_NO +
   geom_point(data=filtered_data[price>48 & price<712],aes(x=longitude, y=latitude, colour = log(price), size=price), cex=0.3) +
   scale_colour_gradient(low = "grey80",high = "red") +
   theme(legend.position="none")
+
+
+
+
+### PREDICTION ERROR
+plot_NO + 
+  coord_sf(xlim = c(-90.14,-90.0), 
+           ylim = c(29.9, 30.0),
+           expand = FALSE)  +
+  labs(title = "NEW ORLEANS", subtitle = "Model Errors (TRAINING DATA)") +
+  geom_point(data=data_orig_train,aes(x=longitude, y=latitude, colour = log(LASSO_ERROR), size=LASSO_ERROR), cex=0.6) +
+  scale_colour_gradient2(low = "red",mid = "grey", high = "green") +
+  theme(legend.position="none")
+
+### PREDICTION ERROR
+plot_NO + 
+  coord_sf(xlim = c(-90.14,-90.0), 
+           ylim = c(29.9, 30.0),
+           expand = FALSE)  +
+  labs(title = "NEW ORLEANS", subtitle = "Model Errors (TEST DATA)") +
+  geom_point(data=data_orig_test,aes(x=longitude, y=latitude, colour = log(LASSO_ERROR), size=LASSO_ERROR), cex=0.6) +
+  scale_colour_gradient2(low = "red",mid = "grey", high = "green") +
+theme(legend.position="none")
