@@ -481,7 +481,11 @@ From the table above, we observe that most hosts provide information about their
 
 # Section 4 - Modeling
 
-After carefully examining the covariates, we proceeded to the modeling phase. The dataset was split into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis.
+After carefully examining the covariates, we proceeded to the modeling phase.
+
+We first did some **final data cleaning:**
+
+-   We set up dummy variables for our categorical measures. We also added an interaction variable (number_of_reviews \* review_score_rating) to our data, as we believe that it is possible that more good reviews may have non-linear impact on prices:
 
 ```{r}
 
@@ -520,6 +524,8 @@ final_data[,review_score_ct_interaction:=review_scores_rating * number_of_review
 model_data <- copy(final_data)
 ```
 
+-   The dataset was split into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis.
+
 ```{r}
 
 ### Set up train/test split
@@ -533,6 +539,8 @@ data_train <- model_data[ tt_split,]
 data_test <- model_data[ -tt_split,]
 ```
 
+-   We then did our log-transformation of price, to improve normality of this data:
+
 ```{r}
 
 # scale price by log, to make the right-skewed distribution look more normal
@@ -543,7 +551,9 @@ data_test[,log_price := log(price)]
 data_test[,price:=NULL]
 ```
 
-We first fit a simple linear regression model using log(price) as our dependent variable:
+### Modeling
+
+Now that we had our final, cleaned data set, we proceeded to **modeling the price data.** We initially started with a simple linear model.
 
 By examining the residuals, we identified opportunities for improvement. As a result, we applied various models chosen through stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.
 

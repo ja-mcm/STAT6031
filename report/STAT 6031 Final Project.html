@@ -3089,7 +3089,10 @@ vertical-align: -.125em;
   <li><a href="#section-1---data-description" id="toc-section-1---data-description" class="nav-link active" data-scroll-target="#section-1---data-description">Section 1 - Data Description</a></li>
   <li><a href="#section-2---data-cleaning" id="toc-section-2---data-cleaning" class="nav-link" data-scroll-target="#section-2---data-cleaning">Section 2 - Data Cleaning</a></li>
   <li><a href="#section-3---exploratory-data-analysis" id="toc-section-3---exploratory-data-analysis" class="nav-link" data-scroll-target="#section-3---exploratory-data-analysis">Section 3 - Exploratory Data Analysis</a></li>
-  <li><a href="#section-4---modeling" id="toc-section-4---modeling" class="nav-link" data-scroll-target="#section-4---modeling">Section 4 - Modeling</a></li>
+  <li><a href="#section-4---modeling" id="toc-section-4---modeling" class="nav-link" data-scroll-target="#section-4---modeling">Section 4 - Modeling</a>
+  <ul class="collapse">
+  <li><a href="#modeling" id="toc-modeling" class="nav-link" data-scroll-target="#modeling">Modeling</a></li>
+  </ul></li>
   <li><a href="#section-5---discussion" id="toc-section-5---discussion" class="nav-link" data-scroll-target="#section-5---discussion">Section 5 - Discussion</a></li>
   </ul>
 </nav>
@@ -4033,7 +4036,11 @@ vertical-align: -.125em;
 </section>
 <section id="section-4---modeling" class="level1">
 <h1>Section 4 - Modeling</h1>
-<p>After carefully examining the covariates, we proceeded to the modeling phase. The dataset was split into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis.</p>
+<p>After carefully examining the covariates, we proceeded to the modeling phase.</p>
+<p>We first did some <strong>final data cleaning:</strong></p>
+<ul>
+<li>We set up dummy variables for our categorical measures. We also added an interaction variable (number_of_reviews * review_score_rating) to our data, as we believe that it is possible that more good reviews may have non-linear impact on prices:</li>
+</ul>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -4072,6 +4079,9 @@ vertical-align: -.125em;
 <span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a>model_data <span class="ot">&lt;-</span> <span class="fu">copy</span>(final_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
+<ul>
+<li>The dataset was split into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis.</li>
+</ul>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -4086,6 +4096,9 @@ vertical-align: -.125em;
 <span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>data_test <span class="ot">&lt;-</span> model_data[ <span class="sc">-</span>tt_split,]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
+<ul>
+<li>We then did our log-transformation of price, to improve normality of this data:</li>
+</ul>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -4097,7 +4110,9 @@ vertical-align: -.125em;
 <span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>data_test[,price<span class="sc">:</span><span class="er">=</span><span class="cn">NULL</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<p>We first fit a simple linear regression model using log(price) as our dependent variable:</p>
+<section id="modeling" class="level3">
+<h3 class="anchored" data-anchor-id="modeling">Modeling</h3>
+<p>Now that we had our final, cleaned data set, we proceeded to <strong>modeling the price data.</strong> We initially started with a simple linear model.</p>
 <p>By examining the residuals, we identified opportunities for improvement. As a result, we applied various models chosen through stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.</p>
 <p><strong>(Note</strong> : coefficients for Lasso and Ridge regression were located using cross-validation)</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset">
@@ -4754,6 +4769,7 @@ review_score_ct_interaction  1.467167e-06</code></pre>
 </details>
 </div>
 <p>Best model is OLS</p>
+</section>
 </section>
 <section id="section-5---discussion" class="level1">
 <h1>Section 5 - Discussion</h1>
