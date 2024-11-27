@@ -3091,9 +3091,13 @@ vertical-align: -.125em;
   <li><a href="#section-3---exploratory-data-analysis" id="toc-section-3---exploratory-data-analysis" class="nav-link" data-scroll-target="#section-3---exploratory-data-analysis">Section 3 - Exploratory Data Analysis</a></li>
   <li><a href="#section-4---modeling" id="toc-section-4---modeling" class="nav-link" data-scroll-target="#section-4---modeling">Section 4 - Modeling</a>
   <ul class="collapse">
+  <li><a href="#finalizing-the-data" id="toc-finalizing-the-data" class="nav-link" data-scroll-target="#finalizing-the-data">Finalizing the Data</a></li>
   <li><a href="#modeling" id="toc-modeling" class="nav-link" data-scroll-target="#modeling">Modeling</a></li>
   </ul></li>
-  <li><a href="#section-5---discussion" id="toc-section-5---discussion" class="nav-link" data-scroll-target="#section-5---discussion">Section 5 - Discussion</a></li>
+  <li><a href="#section-5---discussion" id="toc-section-5---discussion" class="nav-link" data-scroll-target="#section-5---discussion">Section 5 - Discussion</a>
+  <ul class="collapse">
+  <li><a href="#further-study" id="toc-further-study" class="nav-link" data-scroll-target="#further-study">Further Study</a></li>
+  </ul></li>
   </ul>
 </nav>
 </div>
@@ -3157,7 +3161,8 @@ vertical-align: -.125em;
 <ol type="1">
 <li><p><strong>Removing invalid data:</strong> All Airbnb listings missing a price were removed from the dataset. We also removed listings with zero availability, as these tended to have more unrealistic prices (one was $28,000 per night) which could skew the analysis.</p>
 <ul>
-<li>Our analysis therefore seeks to model the <strong>market price</strong> of Airbnb listings (ie. what price people are actually renting Airbnbs for), not the <strong>list price</strong>.</li>
+<li><p>Our analysis therefore seeks to model the <strong>market price</strong> of Airbnb listings (ie. what price people are actually renting Airbnbs for), not the <strong>list price</strong></p></li>
+<li><p>For example, I could list an Airbnb for $1M, but if nobody is renting it, is that price meaningful?</p></li>
 </ul></li>
 </ol>
 <div class="cell">
@@ -3206,10 +3211,12 @@ vertical-align: -.125em;
 </details>
 </div>
 <ol start="3" type="1">
-<li><p><strong>Variable Selection</strong> -</p>
+<li><p><strong>Variable Selection</strong> - Next, we proceeded to select the most relevant variables for our analysis.</p>
 <ul>
-<li><p>Next, we proceeded to select the most relevant variables for our analysis. We removed columns containing URLs, IDs, names, descriptions, and overviews, as well as columns with neighborhood information, since we already had latitude and longitude data. Additionally, we eliminated columns with redundant information or those filled entirely with missing values (NAs).</p></li>
-<li><p>After parsing out the Amenities, we found over 2,000 possible indicators. We narrowed this list down to only look at items present in at least 1% of listings. From these ~150 possibilities, we picked 9 features to model with dummy variables (“has_pool”, for instance))</p>
+<li><p>We removed columns that had no clear relationship to the price (things like URLs, IDs, names).</p></li>
+<li><p>We eliminated columns with redundant information or those filled entirely with missing values (NAs).</p></li>
+<li><p>We also dropped text fields such as descriptions and overviews. Since major features for each Bnb listing were often tagged in the Amenities, these free-text fields did not seem to provide much new insight from what we already had.</p></li>
+<li><p>After parsing out the Amenities, we found over 2,000 possible indicators that could potentially serve as dummy variables. We narrowed this list down to only look at items present in at least 1% of listings. From this reduced list (~150 possibilities), we picked 9 features that seemed the most clearly related to how desirable a property might be (“has_pool”, for instance))</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -3275,8 +3282,8 @@ vertical-align: -.125em;
 </details>
 </div></li>
 </ul></li>
-<li><p><strong>Standardizing the Data:</strong> After removing unnecessary columns, we ensured the data was in a workable format by standardizing missing values, coding them all as NA (as some were empty cells and others were “N/A”). We also converted the boolean columns from “True/False” to 1/0, where 1 corresponded to True and 0 to False. Furthermore, we removed percentage symbols from certain columns to convert them into numeric values. To improve the utility of the data, we modified the “host_since” column to reflect the number of years the host had been active, making it easier to model.</p></li>
-<li><p><strong>Adding supplementary data:</strong> To model how location affects price, we added a new variable to model the “desirability” of a given location…We did this by grabbing the lat-long of the top 10 TripAdvisor destinations in New Orleans, and created a new variable to count the number of points of interest within a 1 km radius of each rental.</p>
+<li><p><strong>Standardizing the Data:</strong> After removing unnecessary columns, we ensured the data was in a workable format by standardizing missing values, coding them all as NA (as some were empty cells and others were “N/A”). We also converted the boolean columns from “True/False” to 1/0, where 1 corresponded to True and 0 to False. Furthermore, we removed percentage symbols from certain columns to convert them into numeric values. To improve the utility of the data, we modified the “host_since” column from a date to a numeric (“number of years active”), making it easier to model.</p></li>
+<li><p><strong>Adding supplementary data:</strong> To model how location affects price, we added a new variable to model the “desirability” of a given location…We did this by grabbing the location (lat-long) of the top 10 TripAdvisor destinations in New Orleans, and created a new variable to count the number of points of interest within a 1 km radius of each rental.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -3353,7 +3360,7 @@ vertical-align: -.125em;
 </div>
 </div>
 </div>
-<p>With these modifications completed, our ``final dataset’’ contained 4,248 observations and 45 covariates. These cleaning and selection steps ensured that the dataset was both accurate and relevant for building a predictive model for Airbnb pricing in the New Orleans region.</p>
+<p>With these modifications completed, our “final” dataset contained 4,248 observations and 45 covariates. These cleaning and selection steps ensured that the dataset was both accurate and relevant for building a predictive model for Airbnb pricing in the New Orleans region.</p>
 </section>
 <section id="section-3---exploratory-data-analysis" class="level1">
 <h1>Section 3 - Exploratory Data Analysis</h1>
@@ -4033,14 +4040,14 @@ vertical-align: -.125em;
 </div>
 </div>
 <p>From the table above, we observe that most hosts provide information about their location, include profile pictures, and have verified identities. However, the majority of rentals lack amenities such as patios, backyards, pools, stainless steel appliances, lakeside views, or indoor fireplaces, among other features.</p>
+<p>Our hope is that the fact these enhanced amenities are uncommon (as opposed to something common, such as Wifi) will provide a clear signal for predicting prices for more upscale listings.</p>
 </section>
 <section id="section-4---modeling" class="level1">
 <h1>Section 4 - Modeling</h1>
-<p>After carefully examining the covariates, we proceeded to the modeling phase.</p>
-<p>We first did some <strong>final data cleaning:</strong></p>
-<ul>
-<li>We set up dummy variables for our categorical measures. We also added an interaction variable (number_of_reviews * review_score_rating) to our data, as we believe that it is possible that more good reviews may have non-linear impact on prices:</li>
-</ul>
+<p>Before modeling our data, we took a few final steps to ensure our data was in the format required for regression analysis.</p>
+<section id="finalizing-the-data" class="level3">
+<h3 class="anchored" data-anchor-id="finalizing-the-data">Finalizing the Data</h3>
+<p>We set up dummy variables for our categorical measures. We also added an interaction variable (number_of_reviews * review_score_rating) to our data, as we believe that it is possible that more good reviews may have non-linear impact on prices:</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -4079,9 +4086,7 @@ vertical-align: -.125em;
 <span id="cb20-33"><a href="#cb20-33" aria-hidden="true" tabindex="-1"></a>model_data <span class="ot">&lt;-</span> <span class="fu">copy</span>(final_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<ul>
-<li>The dataset was split into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis.</li>
-</ul>
+<p>The dataset was split into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis. We then did our log-transformation of price, to improve normality of our dependent variable:</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
@@ -4093,28 +4098,23 @@ vertical-align: -.125em;
 <span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>data_train <span class="ot">&lt;-</span> model_data[ tt_split,]</span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>data_test <span class="ot">&lt;-</span> model_data[ <span class="sc">-</span>tt_split,]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>data_test <span class="ot">&lt;-</span> model_data[ <span class="sc">-</span>tt_split,]</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a><span class="co"># scale price by log, to make the right-skewed distribution look more normal</span></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>data_train[,log_price <span class="sc">:</span><span class="er">=</span> <span class="fu">log</span>(price)]</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>data_train[,price<span class="sc">:</span><span class="er">=</span><span class="cn">NULL</span>]</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>data_test[,log_price <span class="sc">:</span><span class="er">=</span> <span class="fu">log</span>(price)]</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>data_test[,price<span class="sc">:</span><span class="er">=</span><span class="cn">NULL</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<ul>
-<li>We then did our log-transformation of price, to improve normality of this data:</li>
-</ul>
-<div class="cell">
-<details class="code-fold">
-<summary>Code</summary>
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># scale price by log, to make the right-skewed distribution look more normal</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>data_train[,log_price <span class="sc">:</span><span class="er">=</span> <span class="fu">log</span>(price)]</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>data_train[,price<span class="sc">:</span><span class="er">=</span><span class="cn">NULL</span>]</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>data_test[,log_price <span class="sc">:</span><span class="er">=</span> <span class="fu">log</span>(price)]</span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>data_test[,price<span class="sc">:</span><span class="er">=</span><span class="cn">NULL</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</details>
-</div>
+<p>After carefully examining the covariates, we proceeded to the modeling phase.</p>
+</section>
 <section id="modeling" class="level3">
 <h3 class="anchored" data-anchor-id="modeling">Modeling</h3>
-<p>Now that we had our final, cleaned data set, we proceeded to <strong>modeling the price data.</strong> We initially started with a simple linear model.</p>
-<p>By examining the residuals, we identified opportunities for improvement. As a result, we applied various models chosen through stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.</p>
-<p><strong>(Note</strong> : coefficients for Lasso and Ridge regression were located using cross-validation)</p>
+<p>Now that we had our final, cleaned data set, we proceeded to <strong>modeling the price data.</strong> We initially started with a simple linear model, but also created models using stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.</p>
+<p>By examining the residuals, we identified opportunities for improvement.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-4-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-1" role="tab" aria-controls="tabset-4-1" aria-selected="true" href>LM</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-2" role="tab" aria-controls="tabset-4-2" aria-selected="false" href>Stepwise</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-3" role="tab" aria-controls="tabset-4-3" aria-selected="false" href>Lasso</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-4" role="tab" aria-controls="tabset-4-4" aria-selected="false" href>Ridge</a></li></ul>
 <div class="tab-content">
@@ -4122,10 +4122,10 @@ vertical-align: -.125em;
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>simple_lm <span class="ot">&lt;-</span> <span class="fu">lm</span>(log_price<span class="sc">~</span>.,<span class="at">data=</span>data_train)</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(simple_lm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>simple_lm <span class="ot">&lt;-</span> <span class="fu">lm</span>(log_price<span class="sc">~</span>.,<span class="at">data=</span>data_train)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(simple_lm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -4140,15 +4140,15 @@ vertical-align: -.125em;
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>null_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(log_price <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> data_train[<span class="fu">complete.cases</span>(data_train)])</span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>full_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(log_price <span class="sc">~</span> ., <span class="at">data =</span> data_train[<span class="fu">complete.cases</span>(data_train)])</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>step_model <span class="ot">&lt;-</span> <span class="fu">step</span>(null_model, <span class="at">scope =</span> <span class="fu">list</span>(<span class="at">lower =</span> null_model, </span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">upper =</span> full_model),</span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>                       <span class="at">k =</span> <span class="fu">log</span>(<span class="fu">nrow</span>(data_train)), <span class="at">trace =</span> F)</span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
-<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(step_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>null_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(log_price <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> data_train[<span class="fu">complete.cases</span>(data_train)])</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>full_model <span class="ot">&lt;-</span> <span class="fu">lm</span>(log_price <span class="sc">~</span> ., <span class="at">data =</span> data_train[<span class="fu">complete.cases</span>(data_train)])</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>step_model <span class="ot">&lt;-</span> <span class="fu">step</span>(null_model, <span class="at">scope =</span> <span class="fu">list</span>(<span class="at">lower =</span> null_model, </span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>                                         <span class="at">upper =</span> full_model),</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>                       <span class="at">k =</span> <span class="fu">log</span>(<span class="fu">nrow</span>(data_train)), <span class="at">trace =</span> F)</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(step_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -4163,64 +4163,64 @@ vertical-align: -.125em;
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>lasso_cv <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with=</span><span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>                         data_train[,log_price] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">alpha=</span><span class="dv">1</span>,</span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">nfolds=</span><span class="dv">10</span>)</span>
-<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
-<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="co">#plot(lm_lasso_cv)</span></span>
-<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>lasso_model <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with=</span><span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
-<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>                      data_train[,log_price] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
-<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>                      <span class="at">alpha=</span><span class="dv">1</span>,</span>
-<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>                      <span class="at">lambda =</span> lasso_cv<span class="sc">$</span>lambda.min)</span>
-<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>lasso_fitted <span class="ot">&lt;-</span> <span class="fu">predict</span>(lasso_cv,</span>
-<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>                        <span class="at">newx =</span> data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with =</span> <span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(), </span>
-<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>                       <span class="at">s =</span> lasso_cv<span class="sc">$</span>lambda.min)</span>
-<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute residuals</span></span>
-<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>lasso_residuals <span class="ot">&lt;-</span> data_train[, log_price] <span class="sc">-</span> lasso_fitted</span>
-<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute standardized residuals</span></span>
-<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>std_residuals_lasso <span class="ot">&lt;-</span> lasso_residuals <span class="sc">/</span> <span class="fu">sd</span>(lasso_residuals)</span>
-<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Residuals vs Fitted</span></span>
-<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(lasso_fitted, lasso_residuals,</span>
-<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Residuals vs Fitted&quot;</span>,</span>
-<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Fitted Values&quot;</span>,</span>
-<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;Residuals&quot;</span>,</span>
-<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
-<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
-<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
-<span id="cb25-31"><a href="#cb25-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-32"><a href="#cb25-32" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Normal Q-Q Plot</span></span>
-<span id="cb25-33"><a href="#cb25-33" aria-hidden="true" tabindex="-1"></a><span class="fu">qqnorm</span>(lasso_residuals, <span class="at">main =</span> <span class="st">&quot;Normal Q-Q&quot;</span>)</span>
-<span id="cb25-34"><a href="#cb25-34" aria-hidden="true" tabindex="-1"></a><span class="fu">qqline</span>(lasso_residuals, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
-<span id="cb25-35"><a href="#cb25-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-36"><a href="#cb25-36" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Scale-Location Plot</span></span>
-<span id="cb25-37"><a href="#cb25-37" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(lasso_fitted, <span class="fu">sqrt</span>(<span class="fu">abs</span>(std_residuals_lasso)),</span>
-<span id="cb25-38"><a href="#cb25-38" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Scale-Location&quot;</span>,</span>
-<span id="cb25-39"><a href="#cb25-39" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Fitted Values&quot;</span>,</span>
-<span id="cb25-40"><a href="#cb25-40" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="fu">expression</span>(<span class="fu">sqrt</span>(<span class="st">&quot;|Standardized residuals|&quot;</span>)),</span>
-<span id="cb25-41"><a href="#cb25-41" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
-<span id="cb25-42"><a href="#cb25-42" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
-<span id="cb25-43"><a href="#cb25-43" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
-<span id="cb25-44"><a href="#cb25-44" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-45"><a href="#cb25-45" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Residuals vs Leverage</span></span>
-<span id="cb25-46"><a href="#cb25-46" aria-hidden="true" tabindex="-1"></a><span class="co"># Leverage and Cook&#39;s distance are not directly available from glmnet.</span></span>
-<span id="cb25-47"><a href="#cb25-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Approximate by treating leverage as the influence of fitted values.</span></span>
-<span id="cb25-48"><a href="#cb25-48" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-49"><a href="#cb25-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Approximation: Simulate leverage-like values (optional)</span></span>
-<span id="cb25-50"><a href="#cb25-50" aria-hidden="true" tabindex="-1"></a>lasso_leverages <span class="ot">&lt;-</span> <span class="fu">hatvalues</span>(<span class="fu">lm</span>(data_train[, log_price] <span class="sc">~</span> <span class="fu">as.matrix</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with =</span> <span class="cn">FALSE</span>])))</span>
-<span id="cb25-51"><a href="#cb25-51" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-52"><a href="#cb25-52" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(lasso_leverages, lasso_residuals, </span>
-<span id="cb25-53"><a href="#cb25-53" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Residuals vs Leverage&quot;</span>,</span>
-<span id="cb25-54"><a href="#cb25-54" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Leverage&quot;</span>,</span>
-<span id="cb25-55"><a href="#cb25-55" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;Residuals&quot;</span>,</span>
-<span id="cb25-56"><a href="#cb25-56" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
-<span id="cb25-57"><a href="#cb25-57" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
-<span id="cb25-58"><a href="#cb25-58" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>lasso_cv <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with=</span><span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>                         data_train[,log_price] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">alpha=</span><span class="dv">1</span>,</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">nfolds=</span><span class="dv">10</span>)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="co">#plot(lm_lasso_cv)</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>lasso_model <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with=</span><span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>                      data_train[,log_price] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>                      <span class="at">alpha=</span><span class="dv">1</span>,</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>                      <span class="at">lambda =</span> lasso_cv<span class="sc">$</span>lambda.min)</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>lasso_fitted <span class="ot">&lt;-</span> <span class="fu">predict</span>(lasso_cv,</span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>                        <span class="at">newx =</span> data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with =</span> <span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(), </span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>                       <span class="at">s =</span> lasso_cv<span class="sc">$</span>lambda.min)</span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute residuals</span></span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>lasso_residuals <span class="ot">&lt;-</span> data_train[, log_price] <span class="sc">-</span> lasso_fitted</span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute standardized residuals</span></span>
+<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a>std_residuals_lasso <span class="ot">&lt;-</span> lasso_residuals <span class="sc">/</span> <span class="fu">sd</span>(lasso_residuals)</span>
+<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Residuals vs Fitted</span></span>
+<span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(lasso_fitted, lasso_residuals,</span>
+<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Residuals vs Fitted&quot;</span>,</span>
+<span id="cb24-26"><a href="#cb24-26" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Fitted Values&quot;</span>,</span>
+<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;Residuals&quot;</span>,</span>
+<span id="cb24-28"><a href="#cb24-28" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
+<span id="cb24-29"><a href="#cb24-29" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
+<span id="cb24-30"><a href="#cb24-30" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb24-31"><a href="#cb24-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-32"><a href="#cb24-32" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Normal Q-Q Plot</span></span>
+<span id="cb24-33"><a href="#cb24-33" aria-hidden="true" tabindex="-1"></a><span class="fu">qqnorm</span>(lasso_residuals, <span class="at">main =</span> <span class="st">&quot;Normal Q-Q&quot;</span>)</span>
+<span id="cb24-34"><a href="#cb24-34" aria-hidden="true" tabindex="-1"></a><span class="fu">qqline</span>(lasso_residuals, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb24-35"><a href="#cb24-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-36"><a href="#cb24-36" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Scale-Location Plot</span></span>
+<span id="cb24-37"><a href="#cb24-37" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(lasso_fitted, <span class="fu">sqrt</span>(<span class="fu">abs</span>(std_residuals_lasso)),</span>
+<span id="cb24-38"><a href="#cb24-38" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Scale-Location&quot;</span>,</span>
+<span id="cb24-39"><a href="#cb24-39" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Fitted Values&quot;</span>,</span>
+<span id="cb24-40"><a href="#cb24-40" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="fu">expression</span>(<span class="fu">sqrt</span>(<span class="st">&quot;|Standardized residuals|&quot;</span>)),</span>
+<span id="cb24-41"><a href="#cb24-41" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
+<span id="cb24-42"><a href="#cb24-42" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
+<span id="cb24-43"><a href="#cb24-43" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb24-44"><a href="#cb24-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-45"><a href="#cb24-45" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Residuals vs Leverage</span></span>
+<span id="cb24-46"><a href="#cb24-46" aria-hidden="true" tabindex="-1"></a><span class="co"># Leverage and Cook&#39;s distance are not directly available from glmnet.</span></span>
+<span id="cb24-47"><a href="#cb24-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Approximate by treating leverage as the influence of fitted values.</span></span>
+<span id="cb24-48"><a href="#cb24-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-49"><a href="#cb24-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Approximation: Simulate leverage-like values (optional)</span></span>
+<span id="cb24-50"><a href="#cb24-50" aria-hidden="true" tabindex="-1"></a>lasso_leverages <span class="ot">&lt;-</span> <span class="fu">hatvalues</span>(<span class="fu">lm</span>(data_train[, log_price] <span class="sc">~</span> <span class="fu">as.matrix</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with =</span> <span class="cn">FALSE</span>])))</span>
+<span id="cb24-51"><a href="#cb24-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-52"><a href="#cb24-52" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(lasso_leverages, lasso_residuals, </span>
+<span id="cb24-53"><a href="#cb24-53" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Residuals vs Leverage&quot;</span>,</span>
+<span id="cb24-54"><a href="#cb24-54" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Leverage&quot;</span>,</span>
+<span id="cb24-55"><a href="#cb24-55" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;Residuals&quot;</span>,</span>
+<span id="cb24-56"><a href="#cb24-56" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
+<span id="cb24-57"><a href="#cb24-57" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
+<span id="cb24-58"><a href="#cb24-58" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -4235,67 +4235,67 @@ vertical-align: -.125em;
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>ridge_cv <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with=</span><span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>                         data_train[,log_price] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">alpha=</span><span class="dv">0</span>,</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">nfolds=</span><span class="dv">10</span>)</span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a><span class="co">#coef(lm_ridge_cv, s=lm_ridge_cv$lambda.min)</span></span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
-<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a><span class="co">#plot(lm_ridge_cv)</span></span>
-<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>ridge_model <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with=</span><span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
-<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>                      data_train[,log_price] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
-<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>                      <span class="at">alpha=</span><span class="dv">0</span>,</span>
-<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>                      <span class="at">lambda =</span> ridge_cv<span class="sc">$</span>lambda.min)</span>
-<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>ridge_fitted <span class="ot">&lt;-</span> <span class="fu">predict</span>(ridge_cv,</span>
-<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>                        <span class="at">newx =</span> data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with =</span> <span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(), </span>
-<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>                       <span class="at">s =</span> ridge_cv<span class="sc">$</span>lambda.min)</span>
-<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute residuals</span></span>
-<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a>ridge_residuals <span class="ot">&lt;-</span> data_train[, log_price] <span class="sc">-</span> ridge_fitted</span>
-<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute standardized residuals</span></span>
-<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a>std_residuals_ridge <span class="ot">&lt;-</span> ridge_residuals <span class="sc">/</span> <span class="fu">sd</span>(ridge_residuals)</span>
-<span id="cb26-24"><a href="#cb26-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-25"><a href="#cb26-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-26"><a href="#cb26-26" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Residuals vs Fitted</span></span>
-<span id="cb26-27"><a href="#cb26-27" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(ridge_fitted, ridge_residuals,</span>
-<span id="cb26-28"><a href="#cb26-28" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Residuals vs Fitted&quot;</span>,</span>
-<span id="cb26-29"><a href="#cb26-29" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Fitted Values&quot;</span>,</span>
-<span id="cb26-30"><a href="#cb26-30" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;Residuals&quot;</span>,</span>
-<span id="cb26-31"><a href="#cb26-31" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
-<span id="cb26-32"><a href="#cb26-32" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
-<span id="cb26-33"><a href="#cb26-33" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
-<span id="cb26-34"><a href="#cb26-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-35"><a href="#cb26-35" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Normal Q-Q Plot</span></span>
-<span id="cb26-36"><a href="#cb26-36" aria-hidden="true" tabindex="-1"></a><span class="fu">qqnorm</span>(ridge_residuals, <span class="at">main =</span> <span class="st">&quot;Normal Q-Q&quot;</span>)</span>
-<span id="cb26-37"><a href="#cb26-37" aria-hidden="true" tabindex="-1"></a><span class="fu">qqline</span>(ridge_residuals, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
-<span id="cb26-38"><a href="#cb26-38" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-39"><a href="#cb26-39" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Scale-Location Plot</span></span>
-<span id="cb26-40"><a href="#cb26-40" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(ridge_fitted, <span class="fu">sqrt</span>(<span class="fu">abs</span>(std_residuals_ridge)),</span>
-<span id="cb26-41"><a href="#cb26-41" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Scale-Location&quot;</span>,</span>
-<span id="cb26-42"><a href="#cb26-42" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Fitted Values&quot;</span>,</span>
-<span id="cb26-43"><a href="#cb26-43" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="fu">expression</span>(<span class="fu">sqrt</span>(<span class="st">&quot;|Standardized residuals|&quot;</span>)),</span>
-<span id="cb26-44"><a href="#cb26-44" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
-<span id="cb26-45"><a href="#cb26-45" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
-<span id="cb26-46"><a href="#cb26-46" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
-<span id="cb26-47"><a href="#cb26-47" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-48"><a href="#cb26-48" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Residuals vs Leverage</span></span>
-<span id="cb26-49"><a href="#cb26-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Leverage and Cook&#39;s distance are not directly available from glmnet.</span></span>
-<span id="cb26-50"><a href="#cb26-50" aria-hidden="true" tabindex="-1"></a><span class="co"># Approximate by treating leverage as the influence of fitted values.</span></span>
-<span id="cb26-51"><a href="#cb26-51" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-52"><a href="#cb26-52" aria-hidden="true" tabindex="-1"></a><span class="co"># Approximation: Simulate leverage-like values (optional)</span></span>
-<span id="cb26-53"><a href="#cb26-53" aria-hidden="true" tabindex="-1"></a>ridge_leverages <span class="ot">&lt;-</span> <span class="fu">hatvalues</span>(<span class="fu">lm</span>(data_train[, log_price] <span class="sc">~</span> <span class="fu">as.matrix</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with =</span> <span class="cn">FALSE</span>])))</span>
-<span id="cb26-54"><a href="#cb26-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-55"><a href="#cb26-55" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(ridge_leverages, ridge_residuals, </span>
-<span id="cb26-56"><a href="#cb26-56" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Residuals vs Leverage&quot;</span>,</span>
-<span id="cb26-57"><a href="#cb26-57" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Leverage&quot;</span>,</span>
-<span id="cb26-58"><a href="#cb26-58" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;Residuals&quot;</span>,</span>
-<span id="cb26-59"><a href="#cb26-59" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
-<span id="cb26-60"><a href="#cb26-60" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
-<span id="cb26-61"><a href="#cb26-61" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>ridge_cv <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with=</span><span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>                         data_train[,log_price] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">alpha=</span><span class="dv">0</span>,</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">nfolds=</span><span class="dv">10</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="co">#coef(lm_ridge_cv, s=lm_ridge_cv$lambda.min)</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">2</span>))</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a><span class="co">#plot(lm_ridge_cv)</span></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a>ridge_model <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with=</span><span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>                      data_train[,log_price] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(),</span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>                      <span class="at">alpha=</span><span class="dv">0</span>,</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>                      <span class="at">lambda =</span> ridge_cv<span class="sc">$</span>lambda.min)</span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>ridge_fitted <span class="ot">&lt;-</span> <span class="fu">predict</span>(ridge_cv,</span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>                        <span class="at">newx =</span> data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with =</span> <span class="cn">FALSE</span>] <span class="sc">|&gt;</span> <span class="fu">as.matrix</span>(), </span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>                       <span class="at">s =</span> ridge_cv<span class="sc">$</span>lambda.min)</span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute residuals</span></span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>ridge_residuals <span class="ot">&lt;-</span> data_train[, log_price] <span class="sc">-</span> ridge_fitted</span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute standardized residuals</span></span>
+<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>std_residuals_ridge <span class="ot">&lt;-</span> ridge_residuals <span class="sc">/</span> <span class="fu">sd</span>(ridge_residuals)</span>
+<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Residuals vs Fitted</span></span>
+<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(ridge_fitted, ridge_residuals,</span>
+<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Residuals vs Fitted&quot;</span>,</span>
+<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Fitted Values&quot;</span>,</span>
+<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;Residuals&quot;</span>,</span>
+<span id="cb25-31"><a href="#cb25-31" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
+<span id="cb25-32"><a href="#cb25-32" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
+<span id="cb25-33"><a href="#cb25-33" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb25-34"><a href="#cb25-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-35"><a href="#cb25-35" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Normal Q-Q Plot</span></span>
+<span id="cb25-36"><a href="#cb25-36" aria-hidden="true" tabindex="-1"></a><span class="fu">qqnorm</span>(ridge_residuals, <span class="at">main =</span> <span class="st">&quot;Normal Q-Q&quot;</span>)</span>
+<span id="cb25-37"><a href="#cb25-37" aria-hidden="true" tabindex="-1"></a><span class="fu">qqline</span>(ridge_residuals, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb25-38"><a href="#cb25-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-39"><a href="#cb25-39" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Scale-Location Plot</span></span>
+<span id="cb25-40"><a href="#cb25-40" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(ridge_fitted, <span class="fu">sqrt</span>(<span class="fu">abs</span>(std_residuals_ridge)),</span>
+<span id="cb25-41"><a href="#cb25-41" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Scale-Location&quot;</span>,</span>
+<span id="cb25-42"><a href="#cb25-42" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Fitted Values&quot;</span>,</span>
+<span id="cb25-43"><a href="#cb25-43" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="fu">expression</span>(<span class="fu">sqrt</span>(<span class="st">&quot;|Standardized residuals|&quot;</span>)),</span>
+<span id="cb25-44"><a href="#cb25-44" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
+<span id="cb25-45"><a href="#cb25-45" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
+<span id="cb25-46"><a href="#cb25-46" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb25-47"><a href="#cb25-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-48"><a href="#cb25-48" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Residuals vs Leverage</span></span>
+<span id="cb25-49"><a href="#cb25-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Leverage and Cook&#39;s distance are not directly available from glmnet.</span></span>
+<span id="cb25-50"><a href="#cb25-50" aria-hidden="true" tabindex="-1"></a><span class="co"># Approximate by treating leverage as the influence of fitted values.</span></span>
+<span id="cb25-51"><a href="#cb25-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-52"><a href="#cb25-52" aria-hidden="true" tabindex="-1"></a><span class="co"># Approximation: Simulate leverage-like values (optional)</span></span>
+<span id="cb25-53"><a href="#cb25-53" aria-hidden="true" tabindex="-1"></a>ridge_leverages <span class="ot">&lt;-</span> <span class="fu">hatvalues</span>(<span class="fu">lm</span>(data_train[, log_price] <span class="sc">~</span> <span class="fu">as.matrix</span>(data_train[, <span class="sc">!</span><span class="st">&quot;log_price&quot;</span>, <span class="at">with =</span> <span class="cn">FALSE</span>])))</span>
+<span id="cb25-54"><a href="#cb25-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-55"><a href="#cb25-55" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(ridge_leverages, ridge_residuals, </span>
+<span id="cb25-56"><a href="#cb25-56" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">&quot;Residuals vs Leverage&quot;</span>,</span>
+<span id="cb25-57"><a href="#cb25-57" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">&quot;Leverage&quot;</span>,</span>
+<span id="cb25-58"><a href="#cb25-58" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylab =</span> <span class="st">&quot;Residuals&quot;</span>,</span>
+<span id="cb25-59"><a href="#cb25-59" aria-hidden="true" tabindex="-1"></a>     <span class="at">pch =</span> <span class="dv">1</span>,</span>
+<span id="cb25-60"><a href="#cb25-60" aria-hidden="true" tabindex="-1"></a>     <span class="at">col =</span> <span class="st">&quot;black&quot;</span>)</span>
+<span id="cb25-61"><a href="#cb25-61" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">col =</span> <span class="st">&quot;red&quot;</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -4309,6 +4309,7 @@ vertical-align: -.125em;
 </div>
 </div>
 <p>Below are the fitted model coefficients for each:</p>
+<p>(<strong>NOTE:</strong> coefficients for Lasso and Ridge regression were found via 10-fold cross-validation)</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-5-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-1" role="tab" aria-controls="tabset-5-1" aria-selected="true" href>LM</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-2" role="tab" aria-controls="tabset-5-2" aria-selected="false" href>Stepwise</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-3" role="tab" aria-controls="tabset-5-3" aria-selected="false" href>Lasso</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-4" role="tab" aria-controls="tabset-5-4" aria-selected="false" href>Ridge</a></li></ul>
 <div class="tab-content">
@@ -4316,7 +4317,7 @@ vertical-align: -.125em;
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(simple_lm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(simple_lm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>
@@ -4387,7 +4388,7 @@ F-statistic: 138.9 on 44 and 3355 DF,  p-value: &lt; 2.2e-16</code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(step_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(step_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>
@@ -4435,7 +4436,7 @@ F-statistic: 352.7 on 17 and 3382 DF,  p-value: &lt; 2.2e-16</code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>lasso_model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>lasso_model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>
@@ -4446,7 +4447,7 @@ Call:  glmnet(x = as.matrix(data_train[, !&quot;log_price&quot;, with = FALSE]),
 </div>
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(lasso_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(lasso_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>45 x 1 sparse Matrix of class &quot;dgCMatrix&quot;
@@ -4503,7 +4504,7 @@ review_score_ct_interaction  .           </code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>ridge_model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>ridge_model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>
@@ -4514,7 +4515,7 @@ Call:  glmnet(x = as.matrix(data_train[, !&quot;log_price&quot;, with = FALSE]),
 </div>
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(ridge_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(ridge_model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>45 x 1 sparse Matrix of class &quot;dgCMatrix&quot;
@@ -4573,38 +4574,38 @@ review_score_ct_interaction  1.467167e-06</code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In-sample average sum squared error (ASE)</span></span>
-<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>ASE_lm <span class="ot">&lt;-</span> <span class="fu">mean</span>(simple_lm<span class="sc">$</span>residuals<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>MSE_lm <span class="ot">&lt;-</span> <span class="fu">summary</span>(simple_lm)<span class="sc">$</span>sigma<span class="sc">^</span><span class="dv">2</span></span>
-<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>ASE_step <span class="ot">&lt;-</span> <span class="fu">mean</span>(step_model<span class="sc">$</span>residuals<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>MSE_step <span class="ot">&lt;-</span> <span class="fu">summary</span>(step_model)<span class="sc">$</span>sigma<span class="sc">^</span><span class="dv">2</span></span>
-<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>lasso_residuals <span class="ot">&lt;-</span> data_train[, log_price] <span class="sc">-</span> lasso_fitted</span>
-<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>ASE_lasso <span class="ot">&lt;-</span> <span class="fu">mean</span>(lasso_residuals<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a>non_zero_coefs <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">coef</span>(lasso_model, <span class="at">s =</span> lasso_cv<span class="sc">$</span>lambda.min) <span class="sc">!=</span> <span class="dv">0</span>)</span>
-<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>df_lasso <span class="ot">&lt;-</span> <span class="fu">nrow</span>(data_train) <span class="sc">-</span> non_zero_coefs  </span>
-<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a>RSS_lasso <span class="ot">&lt;-</span> <span class="fu">sum</span>(lasso_residuals<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a>MSE_lasso <span class="ot">&lt;-</span> RSS_lasso <span class="sc">/</span> df_lasso</span>
-<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a>ridge_residuals <span class="ot">&lt;-</span> data_train[, log_price] <span class="sc">-</span> ridge_fitted</span>
-<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>ASE_ridge <span class="ot">&lt;-</span> <span class="fu">mean</span>(ridge_residuals<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a><span class="co">#df_rdige &lt;- nrow(data_train) - non_zero_coefs  </span></span>
-<span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a><span class="co">#RSS_lasso &lt;- sum(residuals^2)</span></span>
-<span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a>MSE_ridge <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb39-23"><a href="#cb39-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-24"><a href="#cb39-24" aria-hidden="true" tabindex="-1"></a>results_table <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb39-25"><a href="#cb39-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">Model =</span> <span class="fu">c</span>(<span class="st">&quot;OLS&quot;</span>, <span class="st">&quot;Stepwise Regression&quot;</span>, <span class="st">&quot;Lasso&quot;</span>, <span class="st">&quot;Ridge&quot;</span>),</span>
-<span id="cb39-26"><a href="#cb39-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">ASE =</span> <span class="fu">c</span>(ASE_lm, ASE_step, ASE_lasso, ASE_ridge),</span>
-<span id="cb39-27"><a href="#cb39-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">MSE =</span> <span class="fu">c</span>(MSE_lm, MSE_step, MSE_lasso, MSE_ridge)</span>
-<span id="cb39-28"><a href="#cb39-28" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb39-29"><a href="#cb39-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb39-30"><a href="#cb39-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the table using kable</span></span>
-<span id="cb39-31"><a href="#cb39-31" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(results_table, <span class="at">align =</span> <span class="st">&quot;cccc&quot;</span>, <span class="at">caption =</span> <span class="st">&quot;Model Comparison: ASE and MSE&quot;</span>,</span>
-<span id="cb39-32"><a href="#cb39-32" aria-hidden="true" tabindex="-1"></a>      <span class="at">format =</span> <span class="st">&quot;html&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="co"># In-sample average sum squared error (ASE)</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>ASE_lm <span class="ot">&lt;-</span> <span class="fu">mean</span>(simple_lm<span class="sc">$</span>residuals<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>MSE_lm <span class="ot">&lt;-</span> <span class="fu">summary</span>(simple_lm)<span class="sc">$</span>sigma<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>ASE_step <span class="ot">&lt;-</span> <span class="fu">mean</span>(step_model<span class="sc">$</span>residuals<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>MSE_step <span class="ot">&lt;-</span> <span class="fu">summary</span>(step_model)<span class="sc">$</span>sigma<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a>lasso_residuals <span class="ot">&lt;-</span> data_train[, log_price] <span class="sc">-</span> lasso_fitted</span>
+<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a>ASE_lasso <span class="ot">&lt;-</span> <span class="fu">mean</span>(lasso_residuals<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb38-11"><a href="#cb38-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-12"><a href="#cb38-12" aria-hidden="true" tabindex="-1"></a>non_zero_coefs <span class="ot">&lt;-</span> <span class="fu">sum</span>(<span class="fu">coef</span>(lasso_model, <span class="at">s =</span> lasso_cv<span class="sc">$</span>lambda.min) <span class="sc">!=</span> <span class="dv">0</span>)</span>
+<span id="cb38-13"><a href="#cb38-13" aria-hidden="true" tabindex="-1"></a>df_lasso <span class="ot">&lt;-</span> <span class="fu">nrow</span>(data_train) <span class="sc">-</span> non_zero_coefs  </span>
+<span id="cb38-14"><a href="#cb38-14" aria-hidden="true" tabindex="-1"></a>RSS_lasso <span class="ot">&lt;-</span> <span class="fu">sum</span>(lasso_residuals<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb38-15"><a href="#cb38-15" aria-hidden="true" tabindex="-1"></a>MSE_lasso <span class="ot">&lt;-</span> RSS_lasso <span class="sc">/</span> df_lasso</span>
+<span id="cb38-16"><a href="#cb38-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-17"><a href="#cb38-17" aria-hidden="true" tabindex="-1"></a>ridge_residuals <span class="ot">&lt;-</span> data_train[, log_price] <span class="sc">-</span> ridge_fitted</span>
+<span id="cb38-18"><a href="#cb38-18" aria-hidden="true" tabindex="-1"></a>ASE_ridge <span class="ot">&lt;-</span> <span class="fu">mean</span>(ridge_residuals<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb38-19"><a href="#cb38-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-20"><a href="#cb38-20" aria-hidden="true" tabindex="-1"></a><span class="co">#df_rdige &lt;- nrow(data_train) - non_zero_coefs  </span></span>
+<span id="cb38-21"><a href="#cb38-21" aria-hidden="true" tabindex="-1"></a><span class="co">#RSS_lasso &lt;- sum(residuals^2)</span></span>
+<span id="cb38-22"><a href="#cb38-22" aria-hidden="true" tabindex="-1"></a>MSE_ridge <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb38-23"><a href="#cb38-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-24"><a href="#cb38-24" aria-hidden="true" tabindex="-1"></a>results_table <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb38-25"><a href="#cb38-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">Model =</span> <span class="fu">c</span>(<span class="st">&quot;OLS&quot;</span>, <span class="st">&quot;Stepwise Regression&quot;</span>, <span class="st">&quot;Lasso&quot;</span>, <span class="st">&quot;Ridge&quot;</span>),</span>
+<span id="cb38-26"><a href="#cb38-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">ASE =</span> <span class="fu">c</span>(ASE_lm, ASE_step, ASE_lasso, ASE_ridge),</span>
+<span id="cb38-27"><a href="#cb38-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">MSE =</span> <span class="fu">c</span>(MSE_lm, MSE_step, MSE_lasso, MSE_ridge)</span>
+<span id="cb38-28"><a href="#cb38-28" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb38-29"><a href="#cb38-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-30"><a href="#cb38-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the table using kable</span></span>
+<span id="cb38-31"><a href="#cb38-31" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(results_table, <span class="at">align =</span> <span class="st">&quot;cccc&quot;</span>, <span class="at">caption =</span> <span class="st">&quot;Model Comparison: ASE and MSE&quot;</span>,</span>
+<span id="cb38-32"><a href="#cb38-32" aria-hidden="true" tabindex="-1"></a>      <span class="at">format =</span> <span class="st">&quot;html&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <table class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
@@ -4647,31 +4648,31 @@ review_score_ct_interaction  1.467167e-06</code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>x_test <span class="ot">&lt;-</span> data_test <span class="sc">%&gt;%</span></span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>log_price)</span>
-<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>y_hat_test_ols <span class="ot">&lt;-</span> <span class="fu">predict</span>(simple_lm, x_test)</span>
-<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>MSPE_lm <span class="ot">&lt;-</span> <span class="fu">mean</span>((data_test<span class="sc">$</span>log_price <span class="sc">-</span> y_hat_test_ols)<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>y_hat_test_step <span class="ot">&lt;-</span> <span class="fu">predict</span>(step_model, x_test)</span>
-<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>MSPE_step <span class="ot">&lt;-</span> <span class="fu">mean</span>((data_test<span class="sc">$</span>log_price <span class="sc">-</span> y_hat_test_step)<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>x_test <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(x_test)</span>
-<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>y_hat_test_lasso <span class="ot">&lt;-</span> <span class="fu">predict</span>(lasso_model, x_test,</span>
-<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>                            <span class="at">s =</span> lasso_cv<span class="sc">$</span>lambda.min)</span>
-<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>MSPE_lasso <span class="ot">&lt;-</span> <span class="fu">mean</span>((data_test<span class="sc">$</span>log_price <span class="sc">-</span> y_hat_test_lasso)<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>y_hat_test_ridge <span class="ot">&lt;-</span> <span class="fu">predict</span>(ridge_model, x_test, <span class="at">s =</span> ridge_cv<span class="sc">$</span>lambda.min)</span>
-<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>MSPE_ridge <span class="ot">&lt;-</span> <span class="fu">mean</span>((data_test<span class="sc">$</span>log_price <span class="sc">-</span> y_hat_test_ridge)<span class="sc">^</span><span class="dv">2</span>)</span>
-<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a>results_table <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">Model =</span> <span class="fu">c</span>(<span class="st">&quot;OLS&quot;</span>, <span class="st">&quot;Stepwise Regression&quot;</span>, <span class="st">&quot;Lasso&quot;</span>, <span class="st">&quot;Ridge&quot;</span>),</span>
-<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">MSPE =</span> <span class="fu">c</span>(MSPE_lm, MSPE_step, MSPE_lasso, MSPE_ridge)</span>
-<span id="cb40-21"><a href="#cb40-21" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb40-22"><a href="#cb40-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb40-23"><a href="#cb40-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the table using kable</span></span>
-<span id="cb40-24"><a href="#cb40-24" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(results_table, <span class="at">align =</span> <span class="st">&quot;cccc&quot;</span>, <span class="at">caption =</span> <span class="st">&quot;Out of Sample Performance&quot;</span>,</span>
-<span id="cb40-25"><a href="#cb40-25" aria-hidden="true" tabindex="-1"></a>      <span class="at">format =</span> <span class="st">&quot;html&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>x_test <span class="ot">&lt;-</span> data_test <span class="sc">%&gt;%</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>log_price)</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>y_hat_test_ols <span class="ot">&lt;-</span> <span class="fu">predict</span>(simple_lm, x_test)</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>MSPE_lm <span class="ot">&lt;-</span> <span class="fu">mean</span>((data_test<span class="sc">$</span>log_price <span class="sc">-</span> y_hat_test_ols)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>y_hat_test_step <span class="ot">&lt;-</span> <span class="fu">predict</span>(step_model, x_test)</span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>MSPE_step <span class="ot">&lt;-</span> <span class="fu">mean</span>((data_test<span class="sc">$</span>log_price <span class="sc">-</span> y_hat_test_step)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>x_test <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(x_test)</span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a>y_hat_test_lasso <span class="ot">&lt;-</span> <span class="fu">predict</span>(lasso_model, x_test,</span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a>                            <span class="at">s =</span> lasso_cv<span class="sc">$</span>lambda.min)</span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>MSPE_lasso <span class="ot">&lt;-</span> <span class="fu">mean</span>((data_test<span class="sc">$</span>log_price <span class="sc">-</span> y_hat_test_lasso)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a>y_hat_test_ridge <span class="ot">&lt;-</span> <span class="fu">predict</span>(ridge_model, x_test, <span class="at">s =</span> ridge_cv<span class="sc">$</span>lambda.min)</span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a>MSPE_ridge <span class="ot">&lt;-</span> <span class="fu">mean</span>((data_test<span class="sc">$</span>log_price <span class="sc">-</span> y_hat_test_ridge)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>results_table <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">Model =</span> <span class="fu">c</span>(<span class="st">&quot;OLS&quot;</span>, <span class="st">&quot;Stepwise Regression&quot;</span>, <span class="st">&quot;Lasso&quot;</span>, <span class="st">&quot;Ridge&quot;</span>),</span>
+<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">MSPE =</span> <span class="fu">c</span>(MSPE_lm, MSPE_step, MSPE_lasso, MSPE_ridge)</span>
+<span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-23"><a href="#cb39-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the table using kable</span></span>
+<span id="cb39-24"><a href="#cb39-24" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(results_table, <span class="at">align =</span> <span class="st">&quot;cccc&quot;</span>, <span class="at">caption =</span> <span class="st">&quot;Out of Sample Performance&quot;</span>,</span>
+<span id="cb39-25"><a href="#cb39-25" aria-hidden="true" tabindex="-1"></a>      <span class="at">format =</span> <span class="st">&quot;html&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <table class="caption-top table table-sm table-striped small" data-quarto-postprocess="true">
@@ -4708,64 +4709,64 @@ review_score_ct_interaction  1.467167e-06</code></pre>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define custom function to format as currency without using currency function</span></span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>set_price <span class="ot">&lt;-</span> <span class="cf">function</span>(X) {</span>
-<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>  formatted_price <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">&quot;$%.2f&quot;</span>, <span class="fu">exp</span>(X))  <span class="co"># Format the exp(X) result as currency</span></span>
-<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(formatted_price)</span>
-<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a><span class="co">#set_price &lt;- function(X) {exp(X) |&gt; scales::currency()}</span></span>
-<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-10"><a href="#cb41-10" aria-hidden="true" tabindex="-1"></a><span class="do">### Compare </span><span class="al">TEST</span><span class="do"> predictions</span></span>
-<span id="cb41-11"><a href="#cb41-11" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds &lt;- cbind(seq(1:length(lm_pred)), </span></span>
-<span id="cb41-12"><a href="#cb41-12" aria-hidden="true" tabindex="-1"></a><span class="co">#                    set_price(lm_pred),</span></span>
-<span id="cb41-13"><a href="#cb41-13" aria-hidden="true" tabindex="-1"></a><span class="co">#                    1,</span></span>
-<span id="cb41-14"><a href="#cb41-14" aria-hidden="true" tabindex="-1"></a><span class="co">#                    set_price(lm_step_pred), </span></span>
-<span id="cb41-15"><a href="#cb41-15" aria-hidden="true" tabindex="-1"></a><span class="co">#                    set_price(lm_ridge_pred), </span></span>
-<span id="cb41-16"><a href="#cb41-16" aria-hidden="true" tabindex="-1"></a><span class="co">#                    set_price(lm_lasso_pred),</span></span>
-<span id="cb41-17"><a href="#cb41-17" aria-hidden="true" tabindex="-1"></a><span class="co">#                    set_price(data_test$log_price)) |&gt; as.data.table()</span></span>
-<span id="cb41-18"><a href="#cb41-18" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds &lt;- test_preds[!is.na(V1)]</span></span>
-<span id="cb41-19"><a href="#cb41-19" aria-hidden="true" tabindex="-1"></a><span class="co">#setnames(test_preds, c(&quot;INDX&quot;, &quot;LM&quot;, &quot;LM_ROBUST&quot;, &quot;STEPWISE&quot;, &quot;RIDGE&quot;, &quot;LASSO&quot;, &quot;ACTUAL&quot;))</span></span>
-<span id="cb41-20"><a href="#cb41-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-21"><a href="#cb41-21" aria-hidden="true" tabindex="-1"></a><span class="co">#head(test_preds, 30)</span></span>
-<span id="cb41-22"><a href="#cb41-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-23"><a href="#cb41-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-24"><a href="#cb41-24" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,SSE_LM:=(LM-ACTUAL)^2]</span></span>
-<span id="cb41-25"><a href="#cb41-25" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,SSE_STEPWISE:=(STEPWISE-ACTUAL)^2]</span></span>
-<span id="cb41-26"><a href="#cb41-26" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,SSE_RIDGE:=(RIDGE-ACTUAL)^2]</span></span>
-<span id="cb41-27"><a href="#cb41-27" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,SSE_LASSO:=(LASSO-ACTUAL)^2]</span></span>
-<span id="cb41-28"><a href="#cb41-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-29"><a href="#cb41-29" aria-hidden="true" tabindex="-1"></a><span class="do">### RMSE of predictions</span></span>
-<span id="cb41-30"><a href="#cb41-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Based on test predictions, the ridge method wins!</span></span>
-<span id="cb41-31"><a href="#cb41-31" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,sqrt(sum(SSE_LM))/.N]</span></span>
-<span id="cb41-32"><a href="#cb41-32" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,sqrt(sum(SSE_STEPWISE))/.N]</span></span>
-<span id="cb41-33"><a href="#cb41-33" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,sqrt(sum(SSE_RIDGE))/.N]</span></span>
-<span id="cb41-34"><a href="#cb41-34" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,sqrt(sum(SSE_LASSO))/.N]</span></span>
-<span id="cb41-35"><a href="#cb41-35" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-36"><a href="#cb41-36" aria-hidden="true" tabindex="-1"></a><span class="co">#Variable cleanup</span></span>
-<span id="cb41-37"><a href="#cb41-37" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(all_amenities)</span></span>
-<span id="cb41-38"><a href="#cb41-38" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(dest_points)</span></span>
-<span id="cb41-39"><a href="#cb41-39" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(filtered_data)</span></span>
-<span id="cb41-40"><a href="#cb41-40" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(null_model)</span></span>
-<span id="cb41-41"><a href="#cb41-41" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(full_model)</span></span>
-<span id="cb41-42"><a href="#cb41-42" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(tt_split)</span></span>
-<span id="cb41-43"><a href="#cb41-43" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(cols)</span></span>
-<span id="cb41-44"><a href="#cb41-44" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(inds)</span></span>
-<span id="cb41-45"><a href="#cb41-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-46"><a href="#cb41-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-47"><a href="#cb41-47" aria-hidden="true" tabindex="-1"></a><span class="do">### TO DO </span></span>
-<span id="cb41-48"><a href="#cb41-48" aria-hidden="true" tabindex="-1"></a><span class="do">## Diagnostics</span></span>
-<span id="cb41-49"><a href="#cb41-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Biggest residuals</span></span>
-<span id="cb41-50"><a href="#cb41-50" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-51"><a href="#cb41-51" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[order(-SSE_LM)][1:10]</span></span>
-<span id="cb41-52"><a href="#cb41-52" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-53"><a href="#cb41-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-54"><a href="#cb41-54" aria-hidden="true" tabindex="-1"></a><span class="co"># Outliers</span></span>
-<span id="cb41-55"><a href="#cb41-55" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[LM==max(test_preds$LM)]</span></span>
-<span id="cb41-56"><a href="#cb41-56" aria-hidden="true" tabindex="-1"></a><span class="co">#data_orig_test[545]</span></span>
-<span id="cb41-57"><a href="#cb41-57" aria-hidden="true" tabindex="-1"></a><span class="co">#data_orig_test[652]</span></span>
-<span id="cb41-58"><a href="#cb41-58" aria-hidden="true" tabindex="-1"></a><span class="co">#data_orig_test[571]</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define custom function to format as currency without using currency function</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>set_price <span class="ot">&lt;-</span> <span class="cf">function</span>(X) {</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>  formatted_price <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">&quot;$%.2f&quot;</span>, <span class="fu">exp</span>(X))  <span class="co"># Format the exp(X) result as currency</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(formatted_price)</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a><span class="co">#set_price &lt;- function(X) {exp(X) |&gt; scales::currency()}</span></span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a><span class="do">### Compare </span><span class="al">TEST</span><span class="do"> predictions</span></span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds &lt;- cbind(seq(1:length(lm_pred)), </span></span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a><span class="co">#                    set_price(lm_pred),</span></span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a><span class="co">#                    1,</span></span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a><span class="co">#                    set_price(lm_step_pred), </span></span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a><span class="co">#                    set_price(lm_ridge_pred), </span></span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a><span class="co">#                    set_price(lm_lasso_pred),</span></span>
+<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a><span class="co">#                    set_price(data_test$log_price)) |&gt; as.data.table()</span></span>
+<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds &lt;- test_preds[!is.na(V1)]</span></span>
+<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a><span class="co">#setnames(test_preds, c(&quot;INDX&quot;, &quot;LM&quot;, &quot;LM_ROBUST&quot;, &quot;STEPWISE&quot;, &quot;RIDGE&quot;, &quot;LASSO&quot;, &quot;ACTUAL&quot;))</span></span>
+<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-21"><a href="#cb40-21" aria-hidden="true" tabindex="-1"></a><span class="co">#head(test_preds, 30)</span></span>
+<span id="cb40-22"><a href="#cb40-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-23"><a href="#cb40-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-24"><a href="#cb40-24" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,SSE_LM:=(LM-ACTUAL)^2]</span></span>
+<span id="cb40-25"><a href="#cb40-25" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,SSE_STEPWISE:=(STEPWISE-ACTUAL)^2]</span></span>
+<span id="cb40-26"><a href="#cb40-26" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,SSE_RIDGE:=(RIDGE-ACTUAL)^2]</span></span>
+<span id="cb40-27"><a href="#cb40-27" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,SSE_LASSO:=(LASSO-ACTUAL)^2]</span></span>
+<span id="cb40-28"><a href="#cb40-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-29"><a href="#cb40-29" aria-hidden="true" tabindex="-1"></a><span class="do">### RMSE of predictions</span></span>
+<span id="cb40-30"><a href="#cb40-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Based on test predictions, the ridge method wins!</span></span>
+<span id="cb40-31"><a href="#cb40-31" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,sqrt(sum(SSE_LM))/.N]</span></span>
+<span id="cb40-32"><a href="#cb40-32" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,sqrt(sum(SSE_STEPWISE))/.N]</span></span>
+<span id="cb40-33"><a href="#cb40-33" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,sqrt(sum(SSE_RIDGE))/.N]</span></span>
+<span id="cb40-34"><a href="#cb40-34" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[,sqrt(sum(SSE_LASSO))/.N]</span></span>
+<span id="cb40-35"><a href="#cb40-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-36"><a href="#cb40-36" aria-hidden="true" tabindex="-1"></a><span class="co">#Variable cleanup</span></span>
+<span id="cb40-37"><a href="#cb40-37" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(all_amenities)</span></span>
+<span id="cb40-38"><a href="#cb40-38" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(dest_points)</span></span>
+<span id="cb40-39"><a href="#cb40-39" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(filtered_data)</span></span>
+<span id="cb40-40"><a href="#cb40-40" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(null_model)</span></span>
+<span id="cb40-41"><a href="#cb40-41" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(full_model)</span></span>
+<span id="cb40-42"><a href="#cb40-42" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(tt_split)</span></span>
+<span id="cb40-43"><a href="#cb40-43" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(cols)</span></span>
+<span id="cb40-44"><a href="#cb40-44" aria-hidden="true" tabindex="-1"></a><span class="co">#rm(inds)</span></span>
+<span id="cb40-45"><a href="#cb40-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-46"><a href="#cb40-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-47"><a href="#cb40-47" aria-hidden="true" tabindex="-1"></a><span class="do">### TO DO </span></span>
+<span id="cb40-48"><a href="#cb40-48" aria-hidden="true" tabindex="-1"></a><span class="do">## Diagnostics</span></span>
+<span id="cb40-49"><a href="#cb40-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Biggest residuals</span></span>
+<span id="cb40-50"><a href="#cb40-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-51"><a href="#cb40-51" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[order(-SSE_LM)][1:10]</span></span>
+<span id="cb40-52"><a href="#cb40-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-53"><a href="#cb40-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-54"><a href="#cb40-54" aria-hidden="true" tabindex="-1"></a><span class="co"># Outliers</span></span>
+<span id="cb40-55"><a href="#cb40-55" aria-hidden="true" tabindex="-1"></a><span class="co">#test_preds[LM==max(test_preds$LM)]</span></span>
+<span id="cb40-56"><a href="#cb40-56" aria-hidden="true" tabindex="-1"></a><span class="co">#data_orig_test[545]</span></span>
+<span id="cb40-57"><a href="#cb40-57" aria-hidden="true" tabindex="-1"></a><span class="co">#data_orig_test[652]</span></span>
+<span id="cb40-58"><a href="#cb40-58" aria-hidden="true" tabindex="-1"></a><span class="co">#data_orig_test[571]</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <p>Best model is OLS</p>
@@ -4773,15 +4774,19 @@ review_score_ct_interaction  1.467167e-06</code></pre>
 </section>
 <section id="section-5---discussion" class="level1">
 <h1>Section 5 - Discussion</h1>
-<p>Our pricing model did a solid job of predicting ____________________</p>
-<p>The model revealed that the most salient factors that determine an Airbnb listing’s price in the New Orleans market were:</p>
+<p>Our pricing model did a solid job of predicting the price of Airbnb listings in New Orleans, with ____________________</p>
+<p>The model revealed that the most salient factors that determine an Airbnb listing’s price in this market were:</p>
 <ul>
 <li><p>TBD</p></li>
 <li><p>TBD</p></li>
 <li><p>TBD</p></li>
 <li><p>TBD</p></li>
 </ul>
-<p>An opportunity for further study exists in further supplementing our data to improve predictions. There were many other potential variables related to location that definitely impact prices - CRIME*, transit, local housing prices…..Some, if not all, of these likely have an open data source (such as the police department) that would let us explore each of these. if we had more time, we would have liked to follow up on at least some of these factors to assess their impact on pricing.</p>
+<section id="further-study" class="level2">
+<h2 class="anchored" data-anchor-id="further-study">Further Study</h2>
+<p><strong>Generalizing for other markets</strong>: This model could easily be applied to Airbnb rentals from other markets, to assess how well it describes trends in those markets. By re-training across multiple markets, this model could be generalized to reliably predict prices of ANY Airbnb listing.</p>
+<p><strong>Data Supplementation</strong>: Our model could also benefit from adding publicly-available data to improve predictions. There were many other potential variables related to location that likely impact prices - CRIME*, transit, local housing prices…..Many of these variables have a publicly-available data source (such as the police department) to find this data. If we had more time, we would have liked to follow up on at least some of these factors to assess their impact on pricing.</p>
+</section>
 </section>
 
 </main>

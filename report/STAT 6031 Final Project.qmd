@@ -42,7 +42,9 @@ Our analysis aims to predict Airbnb prices in the New Orleans area using various
 
 1.  **Removing invalid data:** All Airbnb listings missing a price were removed from the dataset. We also removed listings with zero availability, as these tended to have more unrealistic prices (one was \$28,000 per night) which could skew the analysis.
 
-    -   Our analysis therefore seeks to model the **market price** of Airbnb listings (ie. what price people are actually renting Airbnbs for), not the **list price**.
+    -   Our analysis therefore seeks to model the **market price** of Airbnb listings (ie. what price people are actually renting Airbnbs for), not the **list price**
+
+    -   For example, I could list an Airbnb for \$1M, but if nobody is renting it, is that price meaningful?
 
 ```{r, message = FALSE, warning = FALSE}
 
@@ -86,11 +88,15 @@ bnb_data[amenities_list %like% "Window guards",has_window_guards:=1]
 bnb_data[amenities_list %like% "Indoor fireplace",has_indoor_fireplace:=1]
 ```
 
-3.  **Variable Selection** -
+3.  **Variable Selection** - Next, we proceeded to select the most relevant variables for our analysis.
 
-    -   Next, we proceeded to select the most relevant variables for our analysis. We removed columns containing URLs, IDs, names, descriptions, and overviews, as well as columns with neighborhood information, since we already had latitude and longitude data. Additionally, we eliminated columns with redundant information or those filled entirely with missing values (NAs).
+    -   We removed columns that had no clear relationship to the price (things like URLs, IDs, names).
 
-    -   After parsing out the Amenities, we found over 2,000 possible indicators. We narrowed this list down to only look at items present in at least 1% of listings. From these \~150 possibilities, we picked 9 features to model with dummy variables ("has_pool", for instance))
+    -   We eliminated columns with redundant information or those filled entirely with missing values (NAs).
+
+    -   We also dropped text fields such as descriptions and overviews. Since major features for each Bnb listing were often tagged in the Amenities, these free-text fields did not seem to provide much new insight from what we already had.
+
+    -   After parsing out the Amenities, we found over 2,000 possible indicators that could potentially serve as dummy variables. We narrowed this list down to only look at items present in at least 1% of listings. From this reduced list (\~150 possibilities), we picked 9 features that seemed the most clearly related to how desirable a property might be ("has_pool", for instance))
 
         ```{r, message = FALSE, warning = FALSE}
 
@@ -156,9 +162,9 @@ bnb_data[amenities_list %like% "Indoor fireplace",has_indoor_fireplace:=1]
 
         ```
 
-4.  **Standardizing the Data:** After removing unnecessary columns, we ensured the data was in a workable format by standardizing missing values, coding them all as NA (as some were empty cells and others were "N/A"). We also converted the boolean columns from "True/False" to 1/0, where 1 corresponded to True and 0 to False. Furthermore, we removed percentage symbols from certain columns to convert them into numeric values. To improve the utility of the data, we modified the "host_since" column to reflect the number of years the host had been active, making it easier to model.
+4.  **Standardizing the Data:** After removing unnecessary columns, we ensured the data was in a workable format by standardizing missing values, coding them all as NA (as some were empty cells and others were "N/A"). We also converted the boolean columns from "True/False" to 1/0, where 1 corresponded to True and 0 to False. Furthermore, we removed percentage symbols from certain columns to convert them into numeric values. To improve the utility of the data, we modified the "host_since" column from a date to a numeric ("number of years active"), making it easier to model.
 
-5.  **Adding supplementary data:** To model how location affects price, we added a new variable to model the "desirability" of a given location...We did this by grabbing the lat-long of the top 10 TripAdvisor destinations in New Orleans, and created a new variable to count the number of points of interest within a 1 km radius of each rental.
+5.  **Adding supplementary data:** To model how location affects price, we added a new variable to model the "desirability" of a given location...We did this by grabbing the location (lat-long) of the top 10 TripAdvisor destinations in New Orleans, and created a new variable to count the number of points of interest within a 1 km radius of each rental.
 
     ```{r, message = FALSE, warning = FALSE}
     ### Add top 10 destination points from TripAdvisor
@@ -225,7 +231,7 @@ Below, you can observe two New Orleans maps, showing the location of each Airbnb
 ![](Top%2010%20Spots.jpeg){fig-align="center" width="529"}
 :::
 
-With these modifications completed, our \`\`final dataset'' contained 4,248 observations and 45 covariates. These cleaning and selection steps ensured that the dataset was both accurate and relevant for building a predictive model for Airbnb pricing in the New Orleans region.
+With these modifications completed, our "final" dataset contained 4,248 observations and 45 covariates. These cleaning and selection steps ensured that the dataset was both accurate and relevant for building a predictive model for Airbnb pricing in the New Orleans region.
 
 # Section 3 - Exploratory Data Analysis
 
@@ -479,13 +485,15 @@ kable(binary_summary, align = "ccc",
 
 From the table above, we observe that most hosts provide information about their location, include profile pictures, and have verified identities. However, the majority of rentals lack amenities such as patios, backyards, pools, stainless steel appliances, lakeside views, or indoor fireplaces, among other features.
 
+Our hope is that the fact these enhanced amenities are uncommon (as opposed to something common, such as Wifi) will provide a clear signal for predicting prices for more upscale listings.
+
 # Section 4 - Modeling
 
-After carefully examining the covariates, we proceeded to the modeling phase.
+Before modeling our data, we took a few final steps to ensure our data was in the format required for regression analysis.
 
-We first did some **final data cleaning:**
+### Finalizing the Data
 
--   We set up dummy variables for our categorical measures. We also added an interaction variable (number_of_reviews \* review_score_rating) to our data, as we believe that it is possible that more good reviews may have non-linear impact on prices:
+We set up dummy variables for our categorical measures. We also added an interaction variable (number_of_reviews \* review_score_rating) to our data, as we believe that it is possible that more good reviews may have non-linear impact on prices:
 
 ```{r}
 
@@ -524,7 +532,7 @@ final_data[,review_score_ct_interaction:=review_scores_rating * number_of_review
 model_data <- copy(final_data)
 ```
 
--   The dataset was split into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis.
+The dataset was split into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis. We then did our log-transformation of price, to improve normality of our dependent variable:
 
 ```{r}
 
@@ -537,11 +545,7 @@ tt_split <- createDataPartition(
 
 data_train <- model_data[ tt_split,]
 data_test <- model_data[ -tt_split,]
-```
 
--   We then did our log-transformation of price, to improve normality of this data:
-
-```{r}
 
 # scale price by log, to make the right-skewed distribution look more normal
 data_train[,log_price := log(price)]
@@ -551,13 +555,13 @@ data_test[,log_price := log(price)]
 data_test[,price:=NULL]
 ```
 
+After carefully examining the covariates, we proceeded to the modeling phase.
+
 ### Modeling
 
-Now that we had our final, cleaned data set, we proceeded to **modeling the price data.** We initially started with a simple linear model.
+Now that we had our final, cleaned data set, we proceeded to **modeling the price data.** We initially started with a simple linear model, but also created models using stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.
 
-By examining the residuals, we identified opportunities for improvement. As a result, we applied various models chosen through stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.
-
-**(Note** : coefficients for Lasso and Ridge regression were located using cross-validation)
+By examining the residuals, we identified opportunities for improvement.
 
 ::: panel-tabset
 ## LM
@@ -720,6 +724,8 @@ abline(h = 0, col = "red", lty = 2)
 :::
 
 Below are the fitted model coefficients for each:
+
+(**NOTE:** coefficients for Lasso and Ridge regression were found via 10-fold cross-validation)
 
 ::: panel-tabset
 ## LM
@@ -887,11 +893,9 @@ Best model is OLS
 
 # Section 5 - Discussion
 
-Our pricing model did a solid job of predicting \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+Our pricing model did a solid job of predicting the price of Airbnb listings in New Orleans, with \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
 
-The model revealed that the most salient factors that determine an Airbnb listing's price in the New Orleans market were:
-
--   TBD
+The model revealed that the most salient factors that determine an Airbnb listing's price in this market were:
 
 -   TBD
 
@@ -899,4 +903,10 @@ The model revealed that the most salient factors that determine an Airbnb listin
 
 -   TBD
 
-An opportunity for further study exists in further supplementing our data to improve predictions. There were many other potential variables related to location that definitely impact prices - CRIME\*, transit, local housing prices.....Some, if not all, of these likely have an open data source (such as the police department) that would let us explore each of these. if we had more time, we would have liked to follow up on at least some of these factors to assess their impact on pricing.
+-   TBD
+
+## Further Study
+
+**Generalizing for other markets**: This model could easily be applied to Airbnb rentals from other markets, to assess how well it describes trends in those markets. By re-training across multiple markets, this model could be generalized to reliably predict prices of ANY Airbnb listing.
+
+**Data Supplementation**: Our model could also benefit from adding publicly-available data to improve predictions. There were many other potential variables related to location that likely impact prices - CRIME\*, transit, local housing prices.....Many of these variables have a publicly-available data source (such as the police department) to find this data. If we had more time, we would have liked to follow up on at least some of these factors to assess their impact on pricing.
