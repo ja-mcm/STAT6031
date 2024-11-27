@@ -495,12 +495,12 @@ Before modeling our data, we took a few final steps to ensure our data was in th
 
 We set up dummy variables for our categorical measures. We also added an interaction variable (number_of_reviews \* review_score_rating) to our data, as we believe that it is possible that more good reviews may have non-linear impact on prices:
 
-```{r}
+```{r, warning=FALSE}
 
 set.seed(111)
 
 # Location variables are already modelled in via near_top_10
-final_data[,c("neighbourhood_cleansed","latitude", "longitude"):=NULL]
+final_data[,c("neighbourhood_cleansed","latitude", "longitude","amenities_list"):=NULL]
 
 # Get rid of rows with NAs
 final_data <- na.omit(final_data)
@@ -557,7 +557,7 @@ After carefully examining the covariates, we proceeded to the modeling phase.
 
 ### Modeling
 
-Now that we had our final, cleaned data set, we proceeded to **modeling the price data.** We initially started with a simple linear model, but also created models using stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.
+We initially started with a simple linear model, but also created models using stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.
 
 The residuals for each model were extremely similar, so we decided to choose our model based off MSPE (mean squared prediction error) from our hold-out sample of data.
 
@@ -721,7 +721,7 @@ abline(h = 0, col = "red", lty = 2)
 ```
 :::
 
-Our models also had similar MSE/MSPE of around 0.16, which indicates that our model does an effective job of being able to predict prices with the variables it is given. Additionally, because MSE/MSPE are similar, we see no indications of our model over-fitting the training data:
+Our models also had similar MSE/MSPE of around 0.16, which indicates that our models performed roughly the same as one another in accurately predicting prices. Additionally, because MSE/MSPE are similar, we see no indications of our model over-fitting the training data:
 
 ```{r}
 
@@ -792,7 +792,7 @@ kable(results_table, align = "cccc", caption = "Out of Sample Performance",
 
 ## The Winner: Lasso
 
-We chose the Lasso model to be our final price prediction model because it had 1) the lowest MSPE and 2) was more parsimonious than models of comparable accuracy.
+We chose the Lasso model to be our final price prediction model because it had 1) the lowest MSPE of all of our models and 2) was more parsimonious than models of comparable accuracy.
 
 This model fit the data using 36 of 48 variables supplied to it, and achieved an MSPE of 0.1586327.
 
@@ -833,17 +833,37 @@ summary(step_model)
 
 # Section 5 - Discussion
 
-Our pricing model did a solid job of predicting the price of Airbnb listings in New Orleans, with \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+Our pricing model did a solid job of predicting the price of Airbnb listings in New Orleans, with moderately low prediction errors. A noticeable chuck of our residuals were driven by anomalous listings such as this one:
 
-The model revealed that the most salient factors that determine an Airbnb listing's price in this market were:
+\>\>\> TBD
 
--   TBD
+For your "average" Airbnb listing, our model could usually predict the price to within \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_. Therefore, we believe we've modeled this system successfully.
 
--   TBD
+Our model revealed that the most salient factors that determine an Airbnb listing's price in this market were:
 
--   TBD
+-   **is_Hotel** - It was interesting to see this as our biggest driver of costs, being nearly twice as big as the next largest factor. Our interpretation is that 1) hotels likely have a higher operating costs, and pass that along to the consumer and 2) they might only list rooms at an artificially high price, just to cash in when there's a big event, such as Mardi Gras. What this tells us is that hotel listings on Airbnb are likely to be overpriced, relative to the amenities you get.
 
--   TBD
+-   **review_scores_location** - Location clearly affected the value of a listing, but our model clearly shows that **the review scores about the location** matter far more than proximity to TripAdvisor destinations. This could indicate there are other attractions (such as restaurants/bars) that our location variable did not adequately capture. This was a very interesting finding.
+
+-   **has_pool** - this indicator came from the Amenities of each listing, and shows that people clearly value having an outdoor space to relax. Note: there may be some confounding of this variable with **is_Hotel**, since private residences are unlikely to have pools, while hotels often do.
+
+-   **is_private_room** - this room type indicates listings where the room is part of the host's house (ie. they are sharing the house with the host). Not surprisingly, this type of listing was associated with lower listing prices.
+
+-   **bathrooms** - While this seems like a strange variable for the model to key in on, the number of bathrooms seems to provide the most reliable estimator of how many people a residence can (comfortably) host. Our data had alternate measures like "Bedrooms", "Beds", and "Accomodates", but we suspected that some hosts inflate these totals to make their listing seem bigger/more valuable. Apparently, it is harder to inflate the number of bathrooms you have!
+
+While our model did provide some surprising findings, the top factors did make sense. Other significant factors included:
+
+-   Review score (overall)
+
+-   Review score (check-in)
+
+-   Review score (cleanliness)
+
+-   Response time (within a day)
+
+-   Host owning \> 5 properties on Airbnb
+
+Our TripAdvisor variable was also retained in the Lasso model, but had a slightly smaller coefficient than these variables.
 
 ## Further Study
 
