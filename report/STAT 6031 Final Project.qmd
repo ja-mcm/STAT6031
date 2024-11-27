@@ -499,10 +499,8 @@ We set up dummy variables for our categorical measures. We also added an interac
 
 set.seed(111)
 
-# Get rid of high dimensional dummy variables, just for convenience
-final_data[,c("host_location", "neighbourhood_cleansed", "host_response_rate", "host_acceptance_rate", "latitude", "longitude"):=NULL]
-
-# I would keep host location, response and acceptance rate, latitude and longitude
+# Location variables are already modelled in via near_top_10
+final_data[,c("neighbourhood_cleansed","latitude", "longitude"):=NULL]
 
 # Get rid of rows with NAs
 final_data <- na.omit(final_data)
@@ -561,7 +559,7 @@ After carefully examining the covariates, we proceeded to the modeling phase.
 
 Now that we had our final, cleaned data set, we proceeded to **modeling the price data.** We initially started with a simple linear model, but also created models using stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.
 
-By examining the residuals, we identified opportunities for improvement.
+The residuals for each model were extremely similar, so we decided to choose our model based off MSPE (mean squared prediction error) from our hold-out sample of data.
 
 ::: panel-tabset
 ## LM
@@ -723,42 +721,7 @@ abline(h = 0, col = "red", lty = 2)
 ```
 :::
 
-Below are the fitted model coefficients for each:
-
-(**NOTE:** coefficients for Lasso and Ridge regression were found via 10-fold cross-validation)
-
-::: panel-tabset
-## LM
-
-```{r}
-
-summary(simple_lm)
-```
-
-## Stepwise
-
-```{r}
-
-summary(step_model)
-
-```
-
-## Lasso
-
-```{r}
-lasso_model
-coef(lasso_model)
-```
-
-## Ridge
-
-```{r}
-ridge_model
-coef(ridge_model)
-```
-:::
-
-Once we had examined their model diagnostics plots in sample, we further examined some in-sample performance metrics reported below:
+Our models also had similar MSE/MSPE of around 0.16, which indicates that our model does an effective job of being able to predict prices with the variables it is given. Additionally, because MSE/MSPE are similar, we see no indications of our model over-fitting the training data:
 
 ```{r}
 
@@ -796,7 +759,7 @@ kable(results_table, align = "cccc", caption = "Model Comparison: ASE and MSE",
       format = "html")
 ```
 
-Then, we looked at their out-of-sample performance:
+Here is the out-of-sample performance for price prediction:
 
 ```{r}
 
@@ -827,69 +790,46 @@ kable(results_table, align = "cccc", caption = "Out of Sample Performance",
       format = "html")
 ```
 
+## The Winner: Lasso
+
+We chose the Lasso model to be our final price prediction model because it had 1) the lowest MSPE and 2) was more parsimonious than models of comparable accuracy.
+
+This model fit the data using 36 of 48 variables supplied to it, and achieved an MSPE of 0.1586327.
+
+Below are the fitted model coefficients for each:
+
+(**NOTE:** coefficients for Lasso and Ridge regression were found via 10-fold cross-validation)
+
+::: panel-tabset
+## 1) Lasso
+
 ```{r}
-
-# Define custom function to format as currency without using currency function
-set_price <- function(X) {
-  formatted_price <- sprintf("$%.2f", exp(X))  # Format the exp(X) result as currency
-  return(formatted_price)
-}
-
-#set_price <- function(X) {exp(X) |> scales::currency()}
-
-
-### Compare TEST predictions
-#test_preds <- cbind(seq(1:length(lm_pred)), 
-#                    set_price(lm_pred),
-#                    1,
-#                    set_price(lm_step_pred), 
-#                    set_price(lm_ridge_pred), 
-#                    set_price(lm_lasso_pred),
-#                    set_price(data_test$log_price)) |> as.data.table()
-#test_preds <- test_preds[!is.na(V1)]
-#setnames(test_preds, c("INDX", "LM", "LM_ROBUST", "STEPWISE", "RIDGE", "LASSO", "ACTUAL"))
-
-#head(test_preds, 30)
-
-
-#test_preds[,SSE_LM:=(LM-ACTUAL)^2]
-#test_preds[,SSE_STEPWISE:=(STEPWISE-ACTUAL)^2]
-#test_preds[,SSE_RIDGE:=(RIDGE-ACTUAL)^2]
-#test_preds[,SSE_LASSO:=(LASSO-ACTUAL)^2]
-
-### RMSE of predictions
-# Based on test predictions, the ridge method wins!
-#test_preds[,sqrt(sum(SSE_LM))/.N]
-#test_preds[,sqrt(sum(SSE_STEPWISE))/.N]
-#test_preds[,sqrt(sum(SSE_RIDGE))/.N]
-#test_preds[,sqrt(sum(SSE_LASSO))/.N]
-
-#Variable cleanup
-#rm(all_amenities)
-#rm(dest_points)
-#rm(filtered_data)
-#rm(null_model)
-#rm(full_model)
-#rm(tt_split)
-#rm(cols)
-#rm(inds)
-
-
-### TO DO 
-## Diagnostics
-# Biggest residuals
-
-#test_preds[order(-SSE_LM)][1:10]
-
-
-# Outliers
-#test_preds[LM==max(test_preds$LM)]
-#data_orig_test[545]
-#data_orig_test[652]
-#data_orig_test[571]
+lasso_model
+coef(lasso_model)
 ```
 
-Best model is OLS
+## 2) Ridge
+
+```{r}
+ridge_model
+coef(ridge_model)
+```
+
+## 3) LM
+
+```{r}
+
+summary(simple_lm)
+```
+
+## 4) Stepwise
+
+```{r}
+
+summary(step_model)
+
+```
+:::
 
 # Section 5 - Discussion
 
