@@ -429,7 +429,7 @@ Additionally, taking a closer look at our dependent variable price, we decided t
 
 ```{r, message=FALSE}
 
-ggplot(final_data,aes(price)) + geom_histogram() + labs(title = "Distribution of AirBNB Prices - New Orleans")
+ggplot(final_data,aes(price)) + geom_histogram() + labs(title = "Distribution of AirBNB Prices - New Orleans") + theme_bw()
 
 ```
 
@@ -437,7 +437,7 @@ ggplot(final_data,aes(price)) + geom_histogram() + labs(title = "Distribution of
 
 ```{r, message=FALSE}
 
-ggplot(final_data,aes(log(price))) + geom_histogram() + labs(title = "Distribution of log(AirBNB Prices) - New Orleans")
+ggplot(final_data,aes(log(price))) + geom_histogram() + labs(title = "Distribution of log(AirBNB Prices) - New Orleans") + theme_bw()
 
 ```
 :::
@@ -833,11 +833,44 @@ summary(step_model)
 
 # Section 5 - Discussion
 
-Our pricing model did a solid job of predicting the price of Airbnb listings in New Orleans, with moderately low prediction errors. A noticeable chuck of our residuals were driven by anomalous listings such as this one:
+Our pricing model did a solid job of predicting the price of Airbnb listings in New Orleans, with moderately low prediction errors. A noticeable chunk of our residuals were driven by only a few VERY wrong predictions, such as this one:
 
-\>\>\> TBD
+```{r}
 
-For your "average" Airbnb listing, our model could usually predict the price to within \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_. Therefore, we believe we've modeled this system successfully.
+data_test[,ACTUAL_PRICE:=exp(log_price)]
+data_test[,LASSO_PRED:=exp(predict(lasso_model, x_test,
+                               s = lasso_cv$lambda.min))]
+data_test[,LASSO_ERROR:=(data_test$log_price - y_hat_test_lasso)^2]
+data_test[,PRICE_DIFF:=exp(log_price) - LASSO_PRED]
+
+data_test[PRICE_DIFF == min(PRICE_DIFF), .(accommodates, bathrooms, beds, review_scores_rating, LASSO_PRED, ACTUAL_PRICE)]
+```
+
+For your "average" Airbnb listing, our model could predict the price reasonably well - for 80% of our test data, we were able to predict the price to within ±\$50. Therefore, we believe we've modeled this system successfully.
+
+#### Test Prediction Residuals
+
+::: panel-tabset
+## Histogram
+
+Nearly all pricing errors in our model were very small - only a few observations were badly misclassified:
+
+```{r, warning=FALSE, message=FALSE}
+
+ggplot(data = data_test, aes(x=PRICE_DIFF)) + geom_histogram() + theme_bw()
+quantile(data_test$PRICE_DIFF, probs = seq(0, 1, 1/5))
+
+
+```
+
+## Map
+
+Our model didn't appear to systematically over/underestimate prices in specific areas either.
+
+This suggests that our model could reasonably accurately account for the variation in price data due to location differences:
+
+![](Residual_Error_Test.jpeg)
+:::
 
 Our model revealed that the most salient factors that determine an Airbnb listing's price in this market were:
 

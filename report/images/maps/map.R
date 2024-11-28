@@ -78,6 +78,9 @@ plot_NO +
 
 
 
+data_test_2 <- merge(data_test, raw_data, by = "id")
+data_test_2[,SIGN_ERROR := ifelse(PRICE_DIFF > 0, 1, -1)]
+data_train_2 <- merge(data_train, raw_data, by = "id")
 
 ### PREDICTION ERROR
 plot_NO + 
@@ -85,7 +88,7 @@ plot_NO +
            ylim = c(29.9, 30.0),
            expand = FALSE)  +
   labs(title = "NEW ORLEANS", subtitle = "Over/Underestimates (TRAINING DATA)") +
-  geom_point(data=data_orig_train,aes(x=longitude, y=latitude, colour = log(abs(LASSO_ERROR))*LASSO_SIGN), cex=0.3) +
+  geom_point(data=data_train_2,aes(x=longitude, y=latitude, colour = log(abs(LASSO_ERROR))*LASSO_SIGN), cex=0.3) +
   scale_color_gradient2(
     low = "red", high = "green", mid = "grey70",
     breaks=c(-2.5,0,2.5),
@@ -93,13 +96,15 @@ plot_NO +
     midpoint = 0) +
   theme(legend.position="none")
 
+
+
 ### PREDICTION ERROR
 plot_NO + 
   coord_sf(xlim = c(-90.14,-90.0), 
            ylim = c(29.9, 30.0),
            expand = FALSE)  +
   labs(title = "NEW ORLEANS", subtitle = "Over/Underestimates (TEST DATA)") +
-  geom_point(data=data_orig_test,aes(x=longitude, y=latitude, colour = log(abs(LASSO_ERROR))*LASSO_SIGN), cex=0.6) +
+  geom_point(data=data_test_2,aes(x=longitude, y=latitude, colour = SIGN_ERROR*(log(abs(PRICE_DIFF))), cex=0.1)) +
   scale_color_gradient2(
     low = "red", high = "green", mid = "grey70",
     breaks=c(-2.5,0,2.5),
