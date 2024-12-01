@@ -26,6 +26,7 @@ library(MASS)
 library(glmnet)
 library(boot)
 library(scales)
+library(car)
 ```
 
 # Section 1 - Data Description
@@ -38,13 +39,9 @@ It contains 7,118 observations and 75 covariates related to Airbnb listings in t
 
 # Section 2 - Data Cleaning
 
-Our analysis aims to predict Airbnb prices in the New Orleans area using various metrics, with "price" serving as the dependent variable. To ensure the quality and reliability of the data, we began by cleaning the dataset. This initial step involved several key tasks:
+Our analysis aims to predict Airbnb prices in the New Orleans area using various metrics, with "price" serving as the dependent variable. To ensure the quality and reliability of the data, we began by cleaning the dataset. This initial step involved several key tasks, including the removal of dollar signs from the price column and filtering out rows with missing price information.
 
-1.  **Removing invalid data:** All Airbnb listings missing a price were removed from the dataset. We also removed listings with zero availability, as these tended to have more unrealistic prices (one was \$28,000 per night) which could skew the analysis.
-
-    -   Our analysis therefore seeks to model the **market price** of Airbnb listings (ie. what price people are actually renting Airbnbs for), not the **list price**
-
-    -   For example, I could list an Airbnb for \$1M, but if nobody is renting it, is that price meaningful?
+Further data preparation involved parsing the amenities column, which was in JSON format, to identify potentially significant amenities that could influence price predictions. We also removed rows containing unrealistic price values or listings with zero availability, as these could skew the analysis.
 
 ```{r, message = FALSE, warning = FALSE}
 
@@ -54,17 +51,6 @@ bnb_data <- raw_data
 ### Remove listings with no price data
 bnb_data <- bnb_data |> mutate(price = as.numeric(gsub("[$,]", "", as.character(price))))
 bnb_data <- bnb_data[nchar(price)>1]  # (!!!) drops roughly 1000 records (!!!)
-
-### Remove "unrealized" listings - these have anomalous prices AND zero availability
-# Or, not available within the next 365 days.....
-# These are likely to have never had an actual stay and therefore their pricing is not relevant to our model
-high_low <- bnb_data[,quantile(price, probs=c(.025, 0.975))]
-bnb_data <- bnb_data[!(((price>high_low[2] | price<high_low[1]) & availability_30 == 0) | availability_365 == 0)]
-```
-
-2.  **Conforming the data:** we parsed out dollar signs from the price column. We also unnested the amenities column, which was in JSON format, to identify potentially significant amenities that could influence price predictions.
-
-```{r, message = FALSE, warning = FALSE}
 
 ### Parse Amenities JSON
 
@@ -86,140 +72,26 @@ bnb_data[amenities_list %like% "Lake",has_lake:=1]
 bnb_data[amenities_list %like% "Private",has_privacy:=1]
 bnb_data[amenities_list %like% "Window guards",has_window_guards:=1]
 bnb_data[amenities_list %like% "Indoor fireplace",has_indoor_fireplace:=1]
+
+cols <- names(bnb_data)[names(bnb_data) %like% "has" & !names(bnb_data) %in% c("host_has_profile_pic", "has_availability")]
+bnb_data[ , (cols) := lapply(.SD, nafill, fill=0), .SDcols = cols]
+
+### Remove "unrealized" listings - these have anomalous prices AND zero availability
+# Or, not available within the next 365 days.....
+# These are likely to have never had an actual stay and therefore their pricing is not relevant to our model
+high_low <- bnb_data[,quantile(price, probs=c(.025, 0.975))]
+bnb_data <- bnb_data[!(((price>high_low[2] | price<high_low[1]) & availability_30 == 0) | availability_365 == 0)]
+  
+
 ```
 
-3.  **Variable Selection** - Next, we proceeded to select the most relevant variables for our analysis.
+Next, we proceeded to select the most relevant variables for our analysis. We removed columns containing URLs, IDs, names, descriptions, and overviews, as well as columns with neighborhood information, since we already had latitude and longitude data. Additionally, we eliminated columns with redundant information or those filled entirely with missing values (NAs).
 
-    -   We removed columns that had no clear relationship to the price (things like URLs, IDs, names).
+After removing unnecessary columns, we ensured the data was in a workable format by standardizing missing values, coding them all as NA (as some were empty cells and others were "N/A"). We also converted the boolean columns from "True/False" to 1/0, where 1 corresponded to True and 0 to False. Furthermore, we removed percentage symbols from certain columns to convert them into numeric values.
 
-    -   We eliminated columns with redundant information or those filled entirely with missing values (NAs).
+To improve the utility of the data, we modified the "host_since" column to reflect the number of years the host had been active, making it easier to model. In addition to these adjustments, we incorporated spatial data by adding the locations of the top 10 destinations in the area, as listed by TripAdvisor, and created a new column to count the number of points of interest within a 1 km radius of each rental.
 
-    -   We also dropped text fields such as descriptions and overviews. Since major features for each Bnb listing were often tagged in the Amenities, these free-text fields did not seem to provide much new insight from what we already had.
-
-    -   After parsing out the Amenities, we found over 2,000 possible indicators that could potentially serve as dummy variables. We narrowed this list down to only look at items present in at least 1% of listings. From this reduced list (\~150 possibilities), we picked 9 features that seemed the most clearly related to how desirable a property might be ("has_pool", for instance))
-
-        ```{r, message = FALSE, warning = FALSE}
-
-        # Select useful variables
-
-        bnb_data <- bnb_data %>% 
-          dplyr::select(-listing_url, -scrape_id, -last_scraped, -source, -name,
-                        -description,-picture_url, -host_id, -host_url, -host_name,
-                        -host_about, -host_thumbnail_url, -host_picture_url,
-                        -bathrooms_text, -minimum_nights,- maximum_nights,
-                        -minimum_minimum_nights, -maximum_minimum_nights,
-                        -minimum_maximum_nights, -maximum_maximum_nights,
-                        -calendar_updated, -has_availability, -calendar_last_scraped,
-                        -first_review, -license, -neighborhood_overview,
-                        -host_verifications, -neighbourhood,-neighbourhood_group_cleansed,
-                        -property_type, -amenities,-host_listings_count,
-                        -host_neighbourhood, -last_review)
-
-        # Replace "N/A" and empty with NA in the entire dataset
-        bnb_data <- bnb_data %>%
-          mutate(across(where(is.character), ~ na_if(., "N/A"))) %>%
-          mutate(across(where(is.character), ~ na_if(., "")))
-
-        ## Convert T/F to 1/0 --> true = 1, false = 0
-        bnb_data <- bnb_data %>%
-          mutate(across(c(host_is_superhost, host_has_profile_pic, 
-                          host_identity_verified, instant_bookable),
-                        ~ if_else(as.character(.) == "t", 1,
-                                  if_else(as.character(.) == "f", 0, NA_real_))))
-
-        # Modify host_since column to host for x years, easier to model
-        bnb_data <- bnb_data %>%
-          mutate(host_since_year = gsub("host since ", "", host_since),
-                 host_since_year = as.Date(host_since_year),
-                 host_years = ifelse(!is.na(host_since_year),  
-                                     as.numeric(format(Sys.Date(), "%Y")) - as.numeric(format(host_since_year, "%Y")),NA)) %>%
-          dplyr::select(-host_since, -host_since_year)
-
-        # Code host_location column as 1 if New Orleans, 0 otherwise
-        bnb_data <- bnb_data %>%
-          mutate(host_location = if_else(host_location == "New Orleans, LA", 1, 0))
-
-        # Remove % symbol and convert to numeric
-        bnb_data$host_response_rate <- as.numeric(gsub("%", "",
-                                                       bnb_data$host_response_rate))
-        bnb_data$host_response_rate <- as.numeric(bnb_data$host_response_rate)
-
-        bnb_data$host_acceptance_rate <- as.numeric(gsub("%", "",
-                                                         bnb_data$host_acceptance_rate))
-        bnb_data$host_acceptance_rate <- as.numeric(bnb_data$host_acceptance_rate)
-
-        ## Remove calculated fields - these are duplicative
-        cols <- names(bnb_data)[names(bnb_data) %like% "calculated"]
-        bnb_data[ , (cols) := NULL]
-
-
-        ### Remove some other columns
-        bnb_data <- bnb_data %>%
-          dplyr::select(-maximum_nights_avg_ntm, -amenities_list)
-
-        cols <- names(bnb_data)[names(bnb_data) %like% "has" & !names(bnb_data) %in% c("host_has_profile_pic", "has_availability")]
-        bnb_data[ , (cols) := lapply(.SD, nafill, fill=0), .SDcols = cols]
-
-        ```
-
-4.  **Standardizing the Data:** After removing unnecessary columns, we ensured the data was in a workable format by standardizing missing values, coding them all as NA (as some were empty cells and others were "N/A"). We also converted the boolean columns from "True/False" to 1/0, where 1 corresponded to True and 0 to False. Furthermore, we removed percentage symbols from certain columns to convert them into numeric values. To improve the utility of the data, we modified the "host_since" column from a date to a numeric ("number of years active"), making it easier to model.
-
-5.  **Adding supplementary data:** To model how location affects price, we added a new variable to model the "desirability" of a given location...We did this by grabbing the location (lat-long) of the top 10 TripAdvisor destinations in New Orleans, and created a new variable to count the number of points of interest within a 1 km radius of each rental.
-
-    ```{r, message = FALSE, warning = FALSE}
-    ### Add top 10 destination points from TripAdvisor
-    # This is meant to model how good the location of the BNB is....
-    # Represented as a count - so "6" means that the listing is within 1 km of 6 different attractions
-    ### Add top 10 destination points from TripAdvisor
-    dest_points <- data.table("Rank" = seq(1:10),
-                              "Location" = c("WW2 Museum", "French Quarter", "Frenchman Street", "Garden District", "Jackson Square", "Preservation Hall", "Mardi Gras World", "St. Louis Cemetary", "New Orleans City Park", "St. Louis Cathedral"),
-                              "Lat" = c(29.943208928864262, 29.959424483411674, 29.964318181205662, 29.928845784748955, 29.95756024289618, 29.958610251707462, 29.941144698995455, 29.959608239041174, 29.993454400417903, 29.95815187771942),
-                              "Long" = c(-90.07057952646183, -90.06491814669677, -90.05773360204412, -90.08380077303872,-90.06294615548948, -90.06534875344381, -90.0621223634231, -90.07117833809907, -90.09813780389588, -90.06370009040566))
-
-
-    ### Find everything within 1 km of each point
-    # Non equi-join (https://www.r-bloggers.com/2021/02/the-unequalled-joy-of-non-equi-joins/)
-
-    # Get locations within 1 km of key points (Latitude only)
-    near_id <- data.table()
-
-    for (i in 1:nrow(dest_points)) {
-      setkey(bnb_data, latitude)
-      setkey(dest_points, Lat)
-      close_lat <- dest_points[i][bnb_data, roll = .01, nomatch = NULL]
-      
-      
-      # Now filter to within 1km - longitude
-      setkey(close_lat, longitude)
-      setkey(dest_points, Long)
-      close_lat_long <- dest_points[i][close_lat, roll = 0.01, nomatch = NULL][,.(id)]
-      
-      near_id <- rbind(near_id, close_lat_long)
-      rm(close_lat)
-      rm(close_lat_long)
-    }
-
-    ### Count up how many points of interest are within 1 km of a given rental
-    near_id <- as.data.table(near_id)
-    near_id <- near_id[,near_top_10 := .N, by=id]
-
-    # Add this new derived variable back into the main dataset
-    bnb_data <- near_id[bnb_data,on="id"]
-    bnb_data <- bnb_data[is.na(near_top_10), near_top_10:=0]|> unique()
-
-    rm(near_id)
-    rm(high_low)
-    rm(i)
-    rm(all_amenities)
-    rm(cols)
-
-    bnb_data <- bnb_data %>%
-      dplyr::select(-id)
-
-    final_data <- bnb_data
-    ```
-
-Below, you can observe two New Orleans maps, showing the location of each Airbnb in the New Orleans area as well as the ones within 1 km of a top 10 TripAdvisor destination:
+Below, you can observe two New Orleans maps, showing the spatial location of each Airbnb in the New Orleans area as well as the ones within 1 km of a top 10 TripAdvisor destination:
 
 ::: panel-tabset
 ## Airbnb Location
@@ -231,7 +103,117 @@ Below, you can observe two New Orleans maps, showing the location of each Airbnb
 ![](Top%2010%20Spots.jpeg){fig-align="center" width="529"}
 :::
 
-With these modifications completed, our "final" dataset contained 4,248 observations and 45 covariates. These cleaning and selection steps ensured that the dataset was both accurate and relevant for building a predictive model for Airbnb pricing in the New Orleans region.
+With these modifications completed, our \`\`final dataset'' contained 5,921 observations and 45 covariates. These cleaning and selection steps ensured that the dataset was both accurate and relevant for building a predictive model for Airbnb pricing in the New Orleans region.
+
+```{r, message = FALSE, warning = FALSE}
+
+# Select useful variables
+
+bnb_data <- bnb_data %>% 
+  dplyr::select(-listing_url, -scrape_id, -last_scraped, -source, -name,
+                -description,-picture_url, -host_id, -host_url, -host_name,
+                -host_about, -host_thumbnail_url, -host_picture_url,
+                -bathrooms_text, -minimum_nights,- maximum_nights,
+                -minimum_minimum_nights, -maximum_minimum_nights,
+                -minimum_maximum_nights, -maximum_maximum_nights,
+                -calendar_updated, -has_availability, -calendar_last_scraped,
+                -first_review, -license, -neighborhood_overview,
+                -host_verifications, -neighbourhood,-neighbourhood_group_cleansed,
+                -property_type, -amenities,-host_listings_count,
+                -host_neighbourhood, -last_review)
+
+# Replace "N/A" and empty with NA in the entire dataset
+bnb_data <- bnb_data %>%
+  mutate(across(where(is.character), ~ na_if(., "N/A"))) %>%
+  mutate(across(where(is.character), ~ na_if(., "")))
+
+## Convert T/F to 1/0 --> true = 1, false = 0
+bnb_data <- bnb_data %>%
+  mutate(across(c(host_is_superhost, host_has_profile_pic, 
+                  host_identity_verified, instant_bookable),
+                ~ if_else(as.character(.) == "t", 1,
+                          if_else(as.character(.) == "f", 0, NA_real_))))
+
+# Modify host_since column to host for x years, easier to model
+bnb_data <- bnb_data %>%
+  mutate(host_since_year = gsub("host since ", "", host_since),
+         host_since_year = as.Date(host_since_year),
+         host_years = ifelse(!is.na(host_since_year),  
+                             as.numeric(format(Sys.Date(), "%Y")) - as.numeric(format(host_since_year, "%Y")),NA)) %>%
+  dplyr::select(-host_since, -host_since_year)
+
+# Code host_location column as 1 if New Orleans, 0 otherwise
+bnb_data <- bnb_data %>%
+  mutate(host_location = if_else(host_location == "New Orleans, LA", 1, 0))
+
+# Remove % symbol and convert to numeric
+bnb_data$host_response_rate <- as.numeric(gsub("%", "",
+                                               bnb_data$host_response_rate))
+bnb_data$host_response_rate <- as.numeric(bnb_data$host_response_rate)
+
+bnb_data$host_acceptance_rate <- as.numeric(gsub("%", "",
+                                                 bnb_data$host_acceptance_rate))
+bnb_data$host_acceptance_rate <- as.numeric(bnb_data$host_acceptance_rate)
+
+## Remove calculated fields - these are duplicative
+cols <- names(bnb_data)[names(bnb_data) %like% "calculated"]
+bnb_data[ , (cols) := NULL]
+
+### Add top 10 destination points from TripAdvisor
+# This is meant to model how good the location of the BNB is....
+# Represented as a count - so "6" means that the listing is within 1 km of 6 different attractions
+### Add top 10 destination points from TripAdvisor
+dest_points <- data.table("Rank" = seq(1:10),
+                          "Location" = c("WW2 Museum", "French Quarter", "Frenchman Street", "Garden District", "Jackson Square", "Preservation Hall", "Mardi Gras World", "St. Louis Cemetary", "New Orleans City Park", "St. Louis Cathedral"),
+                          "Lat" = c(29.943208928864262, 29.959424483411674, 29.964318181205662, 29.928845784748955, 29.95756024289618, 29.958610251707462, 29.941144698995455, 29.959608239041174, 29.993454400417903, 29.95815187771942),
+                          "Long" = c(-90.07057952646183, -90.06491814669677, -90.05773360204412, -90.08380077303872,-90.06294615548948, -90.06534875344381, -90.0621223634231, -90.07117833809907, -90.09813780389588, -90.06370009040566))
+
+
+### Find everything within 1 km of each point
+# Non equi-join (https://www.r-bloggers.com/2021/02/the-unequalled-joy-of-non-equi-joins/)
+
+# Get locations within 1 km of key points (Latitude only)
+near_id <- data.table()
+
+for (i in 1:nrow(dest_points)) {
+  setkey(bnb_data, latitude)
+  setkey(dest_points, Lat)
+  close_lat <- dest_points[i][bnb_data, roll = .01, nomatch = NULL]
+  
+  
+  # Now filter to within 1km - longitude
+  setkey(close_lat, longitude)
+  setkey(dest_points, Long)
+  close_lat_long <- dest_points[i][close_lat, roll = 0.01, nomatch = NULL][,.(id)]
+  
+  near_id <- rbind(near_id, close_lat_long)
+  rm(close_lat)
+  rm(close_lat_long)
+}
+
+### Count up how many points of interest are within 1 km of a given rental
+near_id <- as.data.table(near_id)
+near_id <- near_id[,near_top_10 := .N, by=id]
+
+### Remove some other columns
+bnb_data <- bnb_data %>%
+  dplyr::select(-maximum_nights_avg_ntm, -amenities_list)
+
+# Add this new derived variable back into the main dataset
+bnb_data <- near_id[bnb_data,on="id"]
+bnb_data <- bnb_data[is.na(near_top_10), near_top_10:=0]|> unique()
+
+rm(near_id)
+rm(high_low)
+rm(i)
+rm(all_amenities)
+rm(cols)
+
+bnb_data <- bnb_data %>%
+  dplyr::select(-id)
+
+final_data <- bnb_data
+```
 
 # Section 3 - Exploratory Data Analysis
 
@@ -285,14 +267,18 @@ nonbinary_summary <- summary_stats(final_data)
 ```{r}
 
 # Create a kable table and center the text in the cells
-kable(nonbinary_summary, align = "ccc",
-      caption = "Summary Statistics for Numeric Variables",
+kable(nonbinary_summary, align = "rcccccc",
+      caption = "Summary Statistics for Non-Binary Variables",
+      col.names = c("Variable", "Mean", "Median", "Standard Deviation",
+                    "Min", "Max", "NAs"),
       format = "html", escape = FALSE)
   
 
 ```
 
-Additionally, we also looked at their distribution by creating boxplots and density plots:
+From the table above, we observed that all columns pertaining to reviews had the same number of missing values. Upon further inspection, we found that the missing values in these columns corresponded to the same rows. Despite this, we decided to include these rows in the model, as they still provided useful information regarding the other covariates. Additionally, we noted that much of our data is skewed.
+
+To explore this skewness in more detail, we analyzed the distributions using boxplots and density plots:
 
 ```{r}
 
@@ -305,10 +291,10 @@ create_plots <- function(data) {
     unique_values <- unique(na.omit(data[[col]]))
     if (is.numeric(data[[col]]) && length(unique_values) > 2) {
       # Create boxplot
-      boxplot(data[[col]], main = paste("Boxplot"), xlab = col, col = "lightblue")
+      boxplot(data[[col]], main = paste("Boxplot"), xlab = col, col = "#5F9DC8")
       
       # Create density plot
-      plot(density(data[[col]], na.rm = TRUE), main = paste("Density Plot"), xlab = col, col = "lightgreen")
+      plot(density(data[[col]], na.rm = TRUE), main = paste("Density Plot"), xlab = col, col = "#5F9DC8")
     } 
   }
 }
@@ -420,7 +406,127 @@ create_plots(selected_columns_7)
 ```
 :::
 
-From the summary statistics and the distribution above, we observe that most of our covariates are skewed and multimodal.
+From the distribution plots above, we observed that most of our covariates are skewed and multimodal. And that most of them contain outliers. We took a closer look at which columns contained outliers and how many, and the results are summarized in hte table below:
+
+```{r, message = FALSE}
+
+# Example dataset
+data <- final_data  # Replace with your actual dataset
+
+# Initialize an empty data frame to store results
+outliers_summary <- data.frame(Variable = character(), 
+                               Num_Outliers = integer(), 
+                               stringsAsFactors = FALSE)
+
+# Loop through all columns in the dataset
+for (col in colnames(data)) {
+  
+  # Check if the column is numeric and has more than two unique values
+  if (is.numeric(data[[col]]) && length(unique(data[[col]])) > 2) {
+    
+    # Calculate the IQR (Interquartile Range)
+    Q1 <- quantile(data[[col]], 0.25, na.rm = TRUE)
+    Q3 <- quantile(data[[col]], 0.75, na.rm = TRUE)
+    IQR_value <- Q3 - Q1
+    
+    # Define the lower and upper bounds for outliers
+    lower_bound <- Q1 - 1.5 * IQR_value
+    upper_bound <- Q3 + 1.5 * IQR_value
+    
+    # Identify outliers
+    outliers <- data[[col]] < lower_bound | data[[col]] > upper_bound
+    
+    # If there are outliers, add the information to the data frame
+    num_outliers <- sum(outliers, na.rm = TRUE)
+    if (num_outliers > 0) {
+      outliers_summary <- rbind(outliers_summary,
+                                data.frame(Variable = col,
+                                           Num_Outliers = num_outliers))
+    }
+  }
+}
+
+# Display the results using kable
+kable(outliers_summary, align = "lc",
+      caption = "Summary of Outliers in Variables", 
+      col.names = c("Variable", "Number of Outliers"),
+      format = "html")
+
+```
+
+As shown in the table above, many variables contained outliers. However, this was primarily due to some listings that could accommodate 6, 8, 10, or even 20 people, and these were still valid listings. Therefore, although our covariates included outliers, we decided to retain them, as they represented valid data.
+
+Other aspects we examined include correlations and multicollinearity. We consider two variables to be highly correlated if their correlation is 0.7 or greater. The table below summarizes the pairs of variables that exhibit strong correlations.
+
+```{r}
+
+numeric_data <- final_data %>%
+  dplyr::select(-neighbourhood_cleansed, -room_type, -host_response_time,
+                -latitude, -longitude)
+
+numeric_data <- na.omit(numeric_data)
+
+numeric_data <- as_tibble(numeric_data)
+
+correlation_matrix <- cor(numeric_data)
+
+threshold <- 0.7
+
+# Find pairs of variables with correlation greater than the threshold
+strong_correlations <- which(abs(correlation_matrix) > threshold, arr.ind = TRUE)
+
+# Filter out the lower triangle (duplicate pairs)
+strong_correlations <- strong_correlations[strong_correlations[, 1] < strong_correlations[, 2], ]
+
+# Create a data frame to store variable pairs and their correlation values
+correlation_data <- data.frame(
+  Variable1 = character(),
+  Variable2 = character(),
+  Correlation = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Populate the data frame with pairs and their correlation values
+for (i in 1:nrow(strong_correlations)) {
+  var1 <- rownames(correlation_matrix)[strong_correlations[i, 1]]
+  var2 <- colnames(correlation_matrix)[strong_correlations[i, 2]]
+  cor_value <- correlation_matrix[strong_correlations[i, 1], strong_correlations[i, 2]]
+  correlation_data <- rbind(correlation_data, data.frame(Variable1 = var1, Variable2 = var2, Correlation = cor_value))
+}
+
+# Print the table using kable
+kable(correlation_data, align = "ccc", 
+      col.names = c("Variable 1", "Variable 2", "Correlation"),
+      caption = "Strongly Correlated Variables")
+```
+
+Since keeping highly correlated variables in a model can negatively impact our results, we have decided to remove some of the highly correlated variables.
+
+We have chosen to keep **accommodates** and remove **bathrooms**, **bedrooms**, and **beds** because **accommodates** is a broader variable that implicitly incorporates aspects such as the number of bedrooms, bathrooms, and beds. Similarly, we have decided to keep **review_scores_rating** and remove the other review categories, as it provides a more general assessment.
+
+We have also decided to keep **availability_365** and remove **availability_30**, **availability_60**, and **availability_90** because we are interested in general availability, and we believe **availability_365** best represents this.
+
+Furthermore, we have chosen to keep **reviews_per_month** instead of **number_of_reviews_ltm**, as it is a more directly interpretable measure of activity.
+
+After removing the variables mentioned earlier from the model, we did not observe any significant correlation or multicollinearity.
+
+```{r}
+
+reduced_data <- numeric_data %>%
+  dplyr::select(-bedrooms, -bathrooms, -beds, -availability_30, -availability_60,
+                -availability_90, -review_scores_accuracy,
+                -review_scores_cleanliness, -review_scores_checkin,
+                -review_scores_communication, -review_scores_location,
+                -review_scores_value, -number_of_reviews_ltm)
+
+correlation_matrix <- cor(reduced_data)
+
+threshold <- 0.7
+
+strong_correlations <- which(abs(correlation_matrix) > threshold, arr.ind = TRUE)
+
+vif_values <- vif(lm(reduced_data))
+```
 
 Additionally, taking a closer look at our dependent variable price, we decided to log-transform our prices, given their right skewness. This helped make the distribution of values for this variable more normal.
 
@@ -429,7 +535,11 @@ Additionally, taking a closer look at our dependent variable price, we decided t
 
 ```{r, message=FALSE}
 
-ggplot(final_data,aes(price)) + geom_histogram() + labs(title = "Distribution of AirBNB Prices - New Orleans") + theme_bw()
+ggplot(reduced_data, aes(price)) +
+  geom_histogram(bins = 30, fill = "#5F9DC8", color = "black", alpha = 0.6) + 
+  labs(title = "Distribution of AirBNB Prices - New Orleans", 
+       x = "Price", y = "Count") +
+  theme_bw()
 
 ```
 
@@ -437,12 +547,15 @@ ggplot(final_data,aes(price)) + geom_histogram() + labs(title = "Distribution of
 
 ```{r, message=FALSE}
 
-ggplot(final_data,aes(log(price))) + geom_histogram() + labs(title = "Distribution of log(AirBNB Prices) - New Orleans") + theme_bw()
-
+ggplot(reduced_data, aes(log(price))) +
+  geom_histogram(bins = 30, fill = "#5F9DC8", color = "black", alpha = 0.6) +
+  labs(title = "Distribution of log(AirBNB Prices) - New Orleans", 
+       x = "Price", y = "Count") +
+  theme_bw()
 ```
 :::
 
-Regarding the binary variables, we looked at the percentage of 1s and 0s:
+Regarding the binary variables, we looked at the percentage of 1s and 0s to better understand the distribution and prevalence of each category. This analysis helps us identify imbalances in the data, which could potentially affect model performance. By examining the proportions, we can determine if any variables exhibit skewed distributions. Additionally, understanding the distribution of binary variables provides insight into their relevance and potential impact on the outcome variable.
 
 ```{r}
 
@@ -470,14 +583,15 @@ report_binary_percentages <- function(data) {
   return(results_df)
 }
 
-binary_summary <- report_binary_percentages(final_data)
+binary_summary <- report_binary_percentages(reduced_data)
 
 ```
 
 ```{r}
 
 # Create a kable table and center the text in the cells
-kable(binary_summary, align = "ccc",
+kable(binary_summary, align = "ccccc",
+      col.names = c("Variable", "% of 1s", "% of 0s"),
       caption = "Summary Statistics for Binary Variables",
       format = "html")
 
@@ -499,35 +613,37 @@ We set up dummy variables for our categorical measures. We also added an interac
 
 set.seed(111)
 
-# Location variables are already modelled in via near_top_10
-final_data[,c("neighbourhood_cleansed","latitude", "longitude","amenities_list"):=NULL]
+setDT(reduced_data)
 
-# Get rid of rows with NAs
-final_data <- na.omit(final_data)
+reduced_data <- reduced_data %>%
+  mutate(logprice = log(price)) %>%
+  dplyr::select(-price)
 
+# Get unique levels of the 'host_response_time' variable
+inds <- unique(reduced_data$host_response_time)
 
-# Create Dummy Variables
-inds <- unique(final_data$host_response_time)
-final_data[, (inds) := lapply(inds, function(x) {ifelse(host_response_time == x, 1, 0)})]
-final_data[,host_response_time:=NULL] ### Drop original column
-final_data[,`a few days or more`:=NULL] ### drop one dummy column, to avoid perfect collinearity
+# Create dummy variables for each unique level in 'host_response_time'
+for (x in inds) {
+  reduced_data[, paste0("host_response_time_", x) := ifelse(host_response_time == x, 1, 0)]
+}
 
-inds <- unique(final_data$room_type)
-final_data[, (inds) := lapply(inds, function(x) {ifelse(room_type == x, 1, 0)})]
-final_data[,room_type:=NULL] ### Drop original column
-final_data[,`Shared room`:=NULL] ### drop one dummy column, to avoid perfect collinearity
+inds <- unique(reduced_data$room_type)
 
-final_data[,host_owns_gt_5:=ifelse(host_total_listings_count > 5, 1, 0)]
-final_data[,host_owns_2_5:=ifelse(host_total_listings_count < 5 & host_total_listings_count > 1, 1,0 )]
-final_data[,host_total_listings_count:=NULL]
+# Create dummy variables for each unique level in 'host_response_time'
+for (x in inds) {
+  reduced_data[, paste0("host_response_time_", x) := ifelse(host_response_time == x, 1, 0)]
+}
+
+reduced_data[,host_owns_gt_5:=ifelse(host_total_listings_count > 5, 1, 0)]
+reduced_data[,host_owns_2_5:=ifelse(host_total_listings_count < 5 & host_total_listings_count > 1, 1,0 )]
+reduced_data[,host_total_listings_count:=NULL]
 
 # Add interaction variable for # of reviews * review 
 # we suspect that the number of high review scores might matter
-final_data[,review_score_ct_interaction:=review_scores_rating * number_of_reviews]
-
+reduced_data[,review_score_ct_interaction:=review_scores_rating * number_of_reviews]
 
 ### Keep a reference dataset
-model_data <- copy(final_data)
+model_data <- copy(reduced_data)
 ```
 
 The dataset was split into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis. We then did our log-transformation of price, to improve normality of our dependent variable:
@@ -536,21 +652,13 @@ The dataset was split into a training set (80%) and a testing set (20%) to facil
 
 ### Set up train/test split
 tt_split <- createDataPartition(
-  y = model_data$price,
+  y = model_data$logprice,
   p = .80, ## The percentage of data in the training set
   list = FALSE
 )
 
 data_train <- model_data[ tt_split,]
 data_test <- model_data[ -tt_split,]
-
-
-# scale price by log, to make the right-skewed distribution look more normal
-data_train[,log_price := log(price)]
-data_train[,price:=NULL]
-
-data_test[,log_price := log(price)]
-data_test[,price:=NULL]
 ```
 
 After carefully examining the covariates, we proceeded to the modeling phase.
@@ -566,7 +674,7 @@ The residuals for each model were extremely similar, so we decided to choose our
 
 ```{r}
 
-simple_lm <- lm(log_price~.,data=data_train)
+simple_lm <- lm(logprice~.,data=data_train)
 
 par(mfrow = c(2,2))
 plot(simple_lm)
@@ -576,8 +684,8 @@ plot(simple_lm)
 
 ```{r}
 
-null_model <- lm(log_price ~ 1, data = data_train[complete.cases(data_train)])
-full_model <- lm(log_price ~ ., data = data_train[complete.cases(data_train)])
+null_model <- lm(logprice ~ 1, data = data_train[complete.cases(data_train)])
+full_model <- lm(logprice ~ ., data = data_train[complete.cases(data_train)])
 
 step_model <- step(null_model, scope = list(lower = null_model, 
                                          upper = full_model),
@@ -592,24 +700,24 @@ plot(step_model)
 
 ```{r}
 
-lasso_cv <- cv.glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
-                         data_train[,log_price] |> as.matrix(),
+lasso_cv <- cv.glmnet(data_train[, !"logprice", with=FALSE] |> as.matrix(),
+                         data_train[,logprice] |> as.matrix(),
                          alpha=1,
                          nfolds=10)
 par(mfrow = c(2,2))
 #plot(lm_lasso_cv)
 
-lasso_model <- glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
-                      data_train[,log_price] |> as.matrix(),
+lasso_model <- glmnet(data_train[, !"logprice", with=FALSE] |> as.matrix(),
+                      data_train[,logprice] |> as.matrix(),
                       alpha=1,
                       lambda = lasso_cv$lambda.min)
 
 lasso_fitted <- predict(lasso_cv,
-                        newx = data_train[, !"log_price", with = FALSE] |> as.matrix(), 
+                        newx = data_train[, !"logprice", with = FALSE] |> as.matrix(), 
                        s = lasso_cv$lambda.min)
 
 # Compute residuals
-lasso_residuals <- data_train[, log_price] - lasso_fitted
+lasso_residuals <- data_train[, logprice] - lasso_fitted
 
 # Compute standardized residuals
 std_residuals_lasso <- lasso_residuals / sd(lasso_residuals)
@@ -641,7 +749,7 @@ abline(h = 0, col = "red", lty = 2)
 # Approximate by treating leverage as the influence of fitted values.
 
 # Approximation: Simulate leverage-like values (optional)
-lasso_leverages <- hatvalues(lm(data_train[, log_price] ~ as.matrix(data_train[, !"log_price", with = FALSE])))
+lasso_leverages <- hatvalues(lm(data_train[, logprice] ~ as.matrix(data_train[, !"logprice", with = FALSE])))
 
 plot(lasso_leverages, lasso_residuals, 
      main = "Residuals vs Leverage",
@@ -657,8 +765,8 @@ abline(h = 0, col = "red", lty = 2)
 
 ```{r}
 
-ridge_cv <- cv.glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
-                         data_train[,log_price] |> as.matrix(),
+ridge_cv <- cv.glmnet(data_train[, !"logprice", with=FALSE] |> as.matrix(),
+                         data_train[,logprice] |> as.matrix(),
                          alpha=0,
                          nfolds=10)
 
@@ -666,17 +774,17 @@ ridge_cv <- cv.glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
 par(mfrow = c(2,2))
 #plot(lm_ridge_cv)
 
-ridge_model <- glmnet(data_train[, !"log_price", with=FALSE] |> as.matrix(),
-                      data_train[,log_price] |> as.matrix(),
+ridge_model <- glmnet(data_train[, !"logprice", with=FALSE] |> as.matrix(),
+                      data_train[,logprice] |> as.matrix(),
                       alpha=0,
                       lambda = ridge_cv$lambda.min)
 
 ridge_fitted <- predict(ridge_cv,
-                        newx = data_train[, !"log_price", with = FALSE] |> as.matrix(), 
+                        newx = data_train[, !"logprice", with = FALSE] |> as.matrix(), 
                        s = ridge_cv$lambda.min)
 
 # Compute residuals
-ridge_residuals <- data_train[, log_price] - ridge_fitted
+ridge_residuals <- data_train[, logprice] - ridge_fitted
 
 # Compute standardized residuals
 std_residuals_ridge <- ridge_residuals / sd(ridge_residuals)
@@ -709,7 +817,7 @@ abline(h = 0, col = "red", lty = 2)
 # Approximate by treating leverage as the influence of fitted values.
 
 # Approximation: Simulate leverage-like values (optional)
-ridge_leverages <- hatvalues(lm(data_train[, log_price] ~ as.matrix(data_train[, !"log_price", with = FALSE])))
+ridge_leverages <- hatvalues(lm(data_train[, logprice] ~ as.matrix(data_train[, !"logprice", with = FALSE])))
 
 plot(ridge_leverages, ridge_residuals, 
      main = "Residuals vs Leverage",
@@ -733,7 +841,7 @@ MSE_lm <- summary(simple_lm)$sigma^2
 ASE_step <- mean(step_model$residuals^2)
 MSE_step <- summary(step_model)$sigma^2
 
-lasso_residuals <- data_train[, log_price] - lasso_fitted
+lasso_residuals <- data_train[, logprice] - lasso_fitted
 ASE_lasso <- mean(lasso_residuals^2)
 
 non_zero_coefs <- sum(coef(lasso_model, s = lasso_cv$lambda.min) != 0)
@@ -741,12 +849,21 @@ df_lasso <- nrow(data_train) - non_zero_coefs
 RSS_lasso <- sum(lasso_residuals^2)
 MSE_lasso <- RSS_lasso / df_lasso
 
-ridge_residuals <- data_train[, log_price] - ridge_fitted
+ridge_residuals <- data_train[, logprice] - ridge_fitted
 ASE_ridge <- mean(ridge_residuals^2)
 
-#df_rdige <- nrow(data_train) - non_zero_coefs  
-#RSS_lasso <- sum(residuals^2)
-MSE_ridge <- 0
+sse_values_ridge <- sum((ridge_residuals)^2)
+
+# Remove the 'logprice' column and convert to matrix
+X <- data_train[, !"logprice", with=FALSE] |> as.matrix()
+
+best_lambda_ridge <- ridge_cv$lambda.min
+hat_matrix_ridge <- X %*% solve(t(X) %*% X + 
+                                  best_lambda_ridge * diag(ncol(X))) %*% t(X)
+edf_ridge <- sum(diag(hat_matrix_ridge)) # EDF (Model DF) 
+df_ridge <- nrow(data_train) - edf_ridge # Residuals DF
+    
+MSE_ridge <- sse_values_ridge/df_ridge
 
 results_table <- tibble(
   Model = c("OLS", "Stepwise Regression", "Lasso", "Ridge"),
@@ -764,21 +881,21 @@ Here is the out-of-sample performance for price prediction:
 ```{r}
 
 x_test <- data_test %>%
-  dplyr::select(-log_price)
+  dplyr::select(-logprice)
 
 y_hat_test_ols <- predict(simple_lm, x_test)
-MSPE_lm <- mean((data_test$log_price - y_hat_test_ols)^2)
+MSPE_lm <- mean((data_test$logprice - y_hat_test_ols)^2)
 
 y_hat_test_step <- predict(step_model, x_test)
-MSPE_step <- mean((data_test$log_price - y_hat_test_step)^2)
+MSPE_step <- mean((data_test$logprice - y_hat_test_step)^2)
 
 x_test <- as.matrix(x_test)
 y_hat_test_lasso <- predict(lasso_model, x_test,
                             s = lasso_cv$lambda.min)
-MSPE_lasso <- mean((data_test$log_price - y_hat_test_lasso)^2)
+MSPE_lasso <- mean((data_test$logprice - y_hat_test_lasso)^2)
 
 y_hat_test_ridge <- predict(ridge_model, x_test, s = ridge_cv$lambda.min)
-MSPE_ridge <- mean((data_test$log_price - y_hat_test_ridge)^2)
+MSPE_ridge <- mean((data_test$logprice - y_hat_test_ridge)^2)
 
 results_table <- tibble(
   Model = c("OLS", "Stepwise Regression", "Lasso", "Ridge"),
@@ -790,46 +907,11 @@ kable(results_table, align = "cccc", caption = "Out of Sample Performance",
       format = "html")
 ```
 
-## The Winner: Lasso
+### The Winner: Lasso
 
 We chose the Lasso model to be our final price prediction model because it had 1) the lowest MSPE of all of our models and 2) was more parsimonious than models of comparable accuracy.
 
 This model fit the data using 36 of 48 variables supplied to it, and achieved an MSPE of 0.1586327.
-
-Below are the fitted model coefficients for each:
-
-(**NOTE:** coefficients for Lasso and Ridge regression were found via 10-fold cross-validation)
-
-::: panel-tabset
-## 1) Lasso
-
-```{r}
-lasso_model
-coef(lasso_model)
-```
-
-## 2) Ridge
-
-```{r}
-ridge_model
-coef(ridge_model)
-```
-
-## 3) LM
-
-```{r}
-
-summary(simple_lm)
-```
-
-## 4) Stepwise
-
-```{r}
-
-summary(step_model)
-
-```
-:::
 
 # Section 5 - Discussion
 
@@ -837,13 +919,13 @@ Our pricing model did a solid job of predicting the price of Airbnb listings in 
 
 ```{r}
 
-data_test[,ACTUAL_PRICE:=exp(log_price)]
+data_test[,ACTUAL_PRICE:=exp(logprice)]
 data_test[,LASSO_PRED:=exp(predict(lasso_model, x_test,
                                s = lasso_cv$lambda.min))]
-data_test[,LASSO_ERROR:=(data_test$log_price - y_hat_test_lasso)^2]
-data_test[,PRICE_DIFF:=exp(log_price) - LASSO_PRED]
+data_test[,LASSO_ERROR:=(data_test$logprice - y_hat_test_lasso)^2]
+data_test[,PRICE_DIFF:=exp(logprice) - LASSO_PRED]
 
-data_test[PRICE_DIFF == min(PRICE_DIFF), .(accommodates, bathrooms, beds, review_scores_rating, LASSO_PRED, ACTUAL_PRICE)]
+#data_test[PRICE_DIFF == min(PRICE_DIFF), .(accommodates, bathrooms, beds, review_scores_rating, LASSO_PRED, ACTUAL_PRICE)]
 ```
 
 For your "average" Airbnb listing, our model could predict the price reasonably well - for 80% of our test data, we were able to predict the price to within ±\$50. Therefore, we believe we've modeled this system successfully.
@@ -857,8 +939,19 @@ Nearly all pricing errors in our model were very small - only a few observations
 
 ```{r, warning=FALSE, message=FALSE}
 
-ggplot(data = data_test, aes(x=PRICE_DIFF)) + geom_histogram() + theme_bw()
-quantile(data_test$PRICE_DIFF, probs = seq(0, 1, 1/5))
+library(ggplot2)
+
+ggplot(data_test, aes(PRICE_DIFF)) + 
+  geom_histogram(binwidth = 50, fill = "#5F9DC8", color = "black", 
+                 alpha = 0.7) + 
+  labs(title = "Distribution of AirBNB Prices - New Orleans", 
+       x = "Price", y = "Count") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5), # Center the title
+        axis.title = element_text(size = 12), # Adjust axis title size
+        axis.text = element_text(size = 10)) # Adjust axis text size
+
+#quantile(data_test$PRICE_DIFF, probs = seq(0, 1, 1/5))
 
 
 ```
