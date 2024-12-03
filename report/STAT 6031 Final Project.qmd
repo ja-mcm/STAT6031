@@ -276,9 +276,55 @@ kable(nonbinary_summary, align = "rcccccc",
 
 ```
 
-From the table above, we observed that all columns pertaining to reviews had the same number of missing values. Upon further inspection, we found that the missing values in these columns corresponded to the same rows. Despite this, we decided to include these rows in the model, as they still provided useful information regarding the other covariates. Additionally, we noted that much of our data is skewed.
+Regarding the binary variables, we looked at the percentage of 1s and 0s to better understand the distribution and prevalence of each category. This analysis helps us identify imbalances in the data, which could potentially affect model performance. By examining the proportions, we can determine if any variables exhibit skewed distributions. Additionally, understanding the distribution of binary variables provides insight into their relevance and potential impact on the outcome variable.
 
-To explore this skewness in more detail, we analyzed the distributions using boxplots and density plots:
+```{r}
+
+### Report % of binary variables
+report_binary_percentages <- function(data) {
+  # Initialize an empty list to store results
+  results <- list()
+  
+  # Loop through each column in the dataset
+  for (col in names(data)) {
+    # Check if the column is binary (contains only 0s, 1s, or NA values)
+    unique_values <- unique(na.omit(data[[col]]))
+    if (all(unique_values %in% c(0, 1))) {
+      # Calculate the percentages of 0s and 1s, ignoring NAs
+      percent_1 <- mean(data[[col]] == 1, na.rm = TRUE) * 100
+      percent_0 <- mean(data[[col]] == 0, na.rm = TRUE) * 100
+      
+      # Store the results in a list
+      results[[col]] <- c(`% of 1s` = percent_1, `% of 0s` = percent_0)
+    }
+  }
+  
+  # Convert the list to a data frame for easier viewing
+  results_df <- as.data.frame(do.call(rbind, results))
+  return(results_df)
+}
+
+binary_summary <- report_binary_percentages(final_data)
+
+```
+
+```{r}
+
+# Create a kable table and center the text in the cells
+kable(binary_summary, align = "ccccc",
+      col.names = c("Variable", "% of 1s", "% of 0s"),
+      caption = "Summary Statistics for Binary Variables",
+      format = "html")
+
+```
+
+From the table above, we observe that most hosts provide information about their location, include profile pictures, and have verified identities. However, the majority of rentals lack amenities such as patios, backyards, pools, stainless steel appliances, lakeside views, or indoor fireplaces, among other features.
+
+Our hope is that the fact these enhanced amenities are uncommon (as opposed to something common, such as Wifi) will provide a clear signal for predicting prices for more upscale listings.
+
+### Distribution of Covariates
+
+Reviewing our summary data, we noted that much of our data is skewed. To explore this skewness in more detail, we analyzed the distributions using boxplots and density plots:
 
 ```{r}
 
@@ -406,7 +452,40 @@ create_plots(selected_columns_7)
 ```
 :::
 
-From the distribution plots above, we observed that most of our covariates are skewed and multimodal. And that most of them contain outliers. We took a closer look at which columns contained outliers and how many, and the results are summarized in hte table below:
+The distribution plots above highlighted a few concerns with the data that we sought to address: 1) Our dependent variable (price) is strongly skewed 2) most of our covariates are skewed and multimodal 3) a few covariates contain outliers, and 4) some of our covariates are highly correlated.
+
+### Addressing Non-Normality
+
+Taking a closer look at our dependent variable (price), we decided to log-transform our prices, given their extreme right skewness. As shown below, this step helped make the distribution of values for this variable more normal.
+
+::: panel-tabset
+## Before
+
+```{r, message=FALSE}
+
+ggplot(final_data, aes(price)) +
+  geom_histogram(bins = 30, fill = "#5F9DC8", color = "black", alpha = 0.6) + 
+  labs(title = "Distribution of AirBNB Prices - New Orleans", 
+       x = "Price", y = "Count") +
+  theme_bw()
+
+```
+
+## After
+
+```{r, message=FALSE}
+
+ggplot(final_data, aes(log(price))) +
+  geom_histogram(bins = 30, fill = "#5F9DC8", color = "black", alpha = 0.6) +
+  labs(title = "Distribution of log(AirBNB Prices) - New Orleans", 
+       x = "Price", y = "Count") +
+  theme_bw()
+```
+:::
+
+### Addressing Outliers
+
+We took a closer look at which columns contained outliers and how many, and the results are summarized in the table below:
 
 ```{r, message = FALSE}
 
@@ -454,7 +533,11 @@ kable(outliers_summary, align = "lc",
 
 ```
 
-As shown in the table above, many variables contained outliers. However, this was primarily due to some listings that could accommodate 6, 8, 10, or even 20 people, and these were still valid listings. Therefore, although our covariates included outliers, we decided to retain them, as they represented valid data.
+As shown in the table above, many variables contained outliers. However, this was primarily due to some listings that could accommodate 6, 8, 10, or even 20 people.
+
+Because each listing had a URL, we checked a handful these listings on the Airbnb website, and found that the for each "outlier" the data was valid (ie. it showed up that way on the website). Therefore, although our covariates included outliers, we decided to retain them, as they represented valid data.
+
+### Addressing Multicollinearity
 
 Other aspects we examined include correlations and multicollinearity. We consider two variables to be highly correlated if their correlation is 0.7 or greater. The table below summarizes the pairs of variables that exhibit strong correlations.
 
@@ -500,15 +583,15 @@ kable(correlation_data, align = "ccc",
       caption = "Strongly Correlated Variables")
 ```
 
-Since keeping highly correlated variables in a model can negatively impact our results, we have decided to remove some of the highly correlated variables.
+To model the effect of the highly correlated variables in our model, we created an reduced dataset where we removed the most highly correlated variables.
 
-We have chosen to keep **accommodates** and remove **bathrooms**, **bedrooms**, and **beds** because **accommodates** is a broader variable that implicitly incorporates aspects such as the number of bedrooms, bathrooms, and beds. Similarly, we have decided to keep **review_scores_rating** and remove the other review categories, as it provides a more general assessment.
+In this dataset, we kept **accommodates** and removed **bathrooms**, **bedrooms**, and **beds** because **accommodates** is a broader variable that implicitly incorporates aspects such as the number of bedrooms, bathrooms, and beds. Similarly, we kept **review_scores_rating** and remove the other review categories, as they are highly correlated to the overall score.
 
-We have also decided to keep **availability_365** and remove **availability_30**, **availability_60**, and **availability_90** because we are interested in general availability, and we believe **availability_365** best represents this.
+We also kept **availability_365** and removed **availability_30**, **availability_60**, and **availability_90** because we are interested in non-seasonal availability, and we believe **availability_365** best represents this.
 
-Furthermore, we have chosen to keep **reviews_per_month** instead of **number_of_reviews_ltm**, as it is a more directly interpretable measure of activity.
+Furthermore, we chose to keep **reviews_per_month** instead of **number_of_reviews_ltm**, as it is a more directly interpretable measure of activity.
 
-After removing the variables mentioned earlier from the model, we did not observe any significant correlation or multicollinearity.
+After removing these variables from our reduced dataset, we did not observe any significant correlation or multicollinearity.
 
 ```{r}
 
@@ -527,79 +610,6 @@ strong_correlations <- which(abs(correlation_matrix) > threshold, arr.ind = TRUE
 
 vif_values <- vif(lm(reduced_data))
 ```
-
-Additionally, taking a closer look at our dependent variable price, we decided to log-transform our prices, given their right skewness. This helped make the distribution of values for this variable more normal.
-
-::: panel-tabset
-## Before
-
-```{r, message=FALSE}
-
-ggplot(final_data, aes(price)) +
-  geom_histogram(bins = 30, fill = "#5F9DC8", color = "black", alpha = 0.6) + 
-  labs(title = "Distribution of AirBNB Prices - New Orleans", 
-       x = "Price", y = "Count") +
-  theme_bw()
-
-```
-
-## After
-
-```{r, message=FALSE}
-
-ggplot(final_data, aes(log(price))) +
-  geom_histogram(bins = 30, fill = "#5F9DC8", color = "black", alpha = 0.6) +
-  labs(title = "Distribution of log(AirBNB Prices) - New Orleans", 
-       x = "Price", y = "Count") +
-  theme_bw()
-```
-:::
-
-Regarding the binary variables, we looked at the percentage of 1s and 0s to better understand the distribution and prevalence of each category. This analysis helps us identify imbalances in the data, which could potentially affect model performance. By examining the proportions, we can determine if any variables exhibit skewed distributions. Additionally, understanding the distribution of binary variables provides insight into their relevance and potential impact on the outcome variable.
-
-```{r}
-
-### Report % of binary variables
-report_binary_percentages <- function(data) {
-  # Initialize an empty list to store results
-  results <- list()
-  
-  # Loop through each column in the dataset
-  for (col in names(data)) {
-    # Check if the column is binary (contains only 0s, 1s, or NA values)
-    unique_values <- unique(na.omit(data[[col]]))
-    if (all(unique_values %in% c(0, 1))) {
-      # Calculate the percentages of 0s and 1s, ignoring NAs
-      percent_1 <- mean(data[[col]] == 1, na.rm = TRUE) * 100
-      percent_0 <- mean(data[[col]] == 0, na.rm = TRUE) * 100
-      
-      # Store the results in a list
-      results[[col]] <- c(`% of 1s` = percent_1, `% of 0s` = percent_0)
-    }
-  }
-  
-  # Convert the list to a data frame for easier viewing
-  results_df <- as.data.frame(do.call(rbind, results))
-  return(results_df)
-}
-
-binary_summary <- report_binary_percentages(reduced_data)
-
-```
-
-```{r}
-
-# Create a kable table and center the text in the cells
-kable(binary_summary, align = "ccccc",
-      col.names = c("Variable", "% of 1s", "% of 0s"),
-      caption = "Summary Statistics for Binary Variables",
-      format = "html")
-
-```
-
-From the table above, we observe that most hosts provide information about their location, include profile pictures, and have verified identities. However, the majority of rentals lack amenities such as patios, backyards, pools, stainless steel appliances, lakeside views, or indoor fireplaces, among other features.
-
-Our hope is that the fact these enhanced amenities are uncommon (as opposed to something common, such as Wifi) will provide a clear signal for predicting prices for more upscale listings.
 
 # Section 4 - Modeling
 
@@ -663,7 +673,7 @@ data_test <- model_data[ -tt_split,]
 
 After carefully examining the covariates, we proceeded to the modeling phase.
 
-### Modeling
+### Modeling - Reduced Dataset (no multicollinearity)
 
 We initially started with a simple linear model, but also created models using stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.
 
@@ -829,7 +839,7 @@ abline(h = 0, col = "red", lty = 2)
 ```
 :::
 
-Our models also had similar MSPE of around 0.195, which indicates that our models performed roughly the same as one another in accurately predicting prices. Additionally, because MSPE are similar, we see no indications of our model over-fitting the training data:
+Our models also had similar MSPE of around 0.195, which indicates that our models performed roughly the same as one another in accurately predicting prices:
 
 ```{r}
 
@@ -909,7 +919,9 @@ kable(results_table, align = "cccc", caption = "Out of Sample Performance",
 
 When selecting a model, there is always a trade-off between performance and interpretability. Removing highly correlated variables improves interpretability but may not guarantee better predictive performance. For this reason, we also sought to compare the behavior of different models when using the full set of predictors, including those that are highly correlated.
 
-To conduct the analysis, we followed the same steps as previously outlined. The results are presented below:
+### Modeling - Full Dataset (w/ multicollinearity)
+
+To conduct the analysis, we followed the same steps as previously outlined with our full dataset. Therefore, all of the correlated columns removed during the EDA step were added back into the model. The results are presented below:
 
 ```{r}
 
@@ -1171,7 +1183,9 @@ kable(results_table, align = "cccc", caption = "Out of Sample Performance",
       format = "html")
 ```
 
-As shown above, when using the model with correlated predictors, all methods demonstrate improved predictive performance. Since the goal of our project is to predict Airbnb prices in the New Orleans area, we have decided to use the model with correlated predictors, as it yields better predictive results.
+As shown above, when using the model with correlated predictors, all methods demonstrate improved predictive performance. Additionally, because the MSPE is very similar to the model's MSE value, we see no indications of our model over-fitting the training data.
+
+Since the goal of our project is to predict Airbnb prices in the New Orleans area, we have decided to use the model with correlated predictors, as it yields better predictive results.
 
 ### The Winner: Lasso
 
@@ -1181,7 +1195,33 @@ This model fit the data using 36 of 48 variables supplied to it, and achieved an
 
 # Section 5 - Discussion
 
-Our pricing model did a solid job of predicting the price of Airbnb listings in New Orleans, with moderately low prediction errors. A noticeable chunk of our residuals were driven by only a few VERY wrong predictions, such as this one:
+Our model revealed that the most salient factors that determine an Airbnb listing's price in this market were:
+
+-   **is_Hotel** - It was interesting to see this as our biggest driver of costs, being nearly twice as big as the next largest factor. Our interpretation is that 1) hotels likely have a higher operating costs, and pass that along to the consumer and 2) they might only list rooms at an artificially high price, just to cash in when there's a big event, such as Mardi Gras. What this tells us is that hotel listings on Airbnb are likely to be overpriced, relative to the amenities you get.
+
+-   **review_scores_location** - Location clearly affected the value of a listing, but our model clearly shows that **the review scores about the location** matter far more than proximity to TripAdvisor destinations. This could indicate there are other attractions (such as restaurants/bars) that our location variable did not adequately capture. This was a very interesting finding.
+
+-   **has_pool** - this indicator came from the Amenities of each listing, and shows that people clearly value having an outdoor space to relax. Note: there may be some confounding of this variable with **is_Hotel**, since private residences are unlikely to have pools, while hotels often do.
+
+-   **is_private_room** - this room type indicates listings where the room is part of the host's house (ie. they are sharing the house with the host). Not surprisingly, this type of listing was associated with lower listing prices.
+
+-   **bathrooms** - While this seems like a strange variable for the model to key in on, the number of bathrooms seems to provide the most reliable estimator of how many people a residence can (comfortably) host. Our data had alternate measures like "Bedrooms", "Beds", and "Accomodates", but we suspected that some hosts inflate these totals to make their listing seem bigger/more valuable. Apparently, it is harder to inflate the number of bathrooms you have!
+
+While our model did provide some surprising findings, the top factors did make sense. Other significant factors included:
+
+-   Review score (overall)
+
+-   Review score (check-in)
+
+-   Review score (cleanliness)
+
+-   Response time (within a day)
+
+-   Host owning \> 5 properties on Airbnb
+
+Our TripAdvisor variable was also retained in the Lasso model, but had a slightly smaller coefficient than these variables.
+
+Our pricing model did a solid job of predicting the price of Airbnb listings in New Orleans, with moderately low prediction errors. A noticeable chunk of our residuals were driven by only a few VERY wrong predictions:
 
 ```{r}
 
@@ -1194,14 +1234,12 @@ data_test[,PRICE_DIFF:=exp(logprice) - LASSO_PRED]
 #data_test[PRICE_DIFF == min(PRICE_DIFF), .(accommodates, bathrooms, beds, review_scores_rating, LASSO_PRED, ACTUAL_PRICE)]
 ```
 
-For your "average" Airbnb listing, our model could predict the price reasonably well - for 80% of our test data, we were able to predict the price to within ±\$50. Therefore, we believe we've modeled this system successfully.
-
 #### Test Prediction Residuals
 
 ::: panel-tabset
 ## Histogram
 
-Nearly all pricing errors in our model were very small - only a few observations were badly misclassified:
+Nearly all pricing errors in our model were very small - only a few observations were badly misclassified. These large residuals may be tied to the outliers we saw during our EDA:
 
 ```{r, warning=FALSE, message=FALSE}
 
@@ -1231,31 +1269,7 @@ This suggests that our model could reasonably accurately account for the variati
 ![](Residual_Error_Test.jpeg)
 :::
 
-Our model revealed that the most salient factors that determine an Airbnb listing's price in this market were:
-
--   **is_Hotel** - It was interesting to see this as our biggest driver of costs, being nearly twice as big as the next largest factor. Our interpretation is that 1) hotels likely have a higher operating costs, and pass that along to the consumer and 2) they might only list rooms at an artificially high price, just to cash in when there's a big event, such as Mardi Gras. What this tells us is that hotel listings on Airbnb are likely to be overpriced, relative to the amenities you get.
-
--   **review_scores_location** - Location clearly affected the value of a listing, but our model clearly shows that **the review scores about the location** matter far more than proximity to TripAdvisor destinations. This could indicate there are other attractions (such as restaurants/bars) that our location variable did not adequately capture. This was a very interesting finding.
-
--   **has_pool** - this indicator came from the Amenities of each listing, and shows that people clearly value having an outdoor space to relax. Note: there may be some confounding of this variable with **is_Hotel**, since private residences are unlikely to have pools, while hotels often do.
-
--   **is_private_room** - this room type indicates listings where the room is part of the host's house (ie. they are sharing the house with the host). Not surprisingly, this type of listing was associated with lower listing prices.
-
--   **bathrooms** - While this seems like a strange variable for the model to key in on, the number of bathrooms seems to provide the most reliable estimator of how many people a residence can (comfortably) host. Our data had alternate measures like "Bedrooms", "Beds", and "Accomodates", but we suspected that some hosts inflate these totals to make their listing seem bigger/more valuable. Apparently, it is harder to inflate the number of bathrooms you have!
-
-While our model did provide some surprising findings, the top factors did make sense. Other significant factors included:
-
--   Review score (overall)
-
--   Review score (check-in)
-
--   Review score (cleanliness)
-
--   Response time (within a day)
-
--   Host owning \> 5 properties on Airbnb
-
-Our TripAdvisor variable was also retained in the Lasso model, but had a slightly smaller coefficient than these variables.
+For your "average" Airbnb listing, our model could predict the price reasonably well: for most listings, we were able to predict the price within ±\$50. Therefore, we believe we've modeled this system successfully.
 
 ## Further Study
 
