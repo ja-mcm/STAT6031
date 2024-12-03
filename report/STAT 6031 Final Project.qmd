@@ -535,7 +535,7 @@ Additionally, taking a closer look at our dependent variable price, we decided t
 
 ```{r, message=FALSE}
 
-ggplot(reduced_data, aes(price)) +
+ggplot(final_data, aes(price)) +
   geom_histogram(bins = 30, fill = "#5F9DC8", color = "black", alpha = 0.6) + 
   labs(title = "Distribution of AirBNB Prices - New Orleans", 
        x = "Price", y = "Count") +
@@ -547,7 +547,7 @@ ggplot(reduced_data, aes(price)) +
 
 ```{r, message=FALSE}
 
-ggplot(reduced_data, aes(log(price))) +
+ggplot(final_data, aes(log(price))) +
   geom_histogram(bins = 30, fill = "#5F9DC8", color = "black", alpha = 0.6) +
   labs(title = "Distribution of log(AirBNB Prices) - New Orleans", 
        x = "Price", y = "Count") +
@@ -829,7 +829,7 @@ abline(h = 0, col = "red", lty = 2)
 ```
 :::
 
-Our models also had similar MSE/MSPE of around 0.16, which indicates that our models performed roughly the same as one another in accurately predicting prices. Additionally, because MSE/MSPE are similar, we see no indications of our model over-fitting the training data:
+Our models also had similar MSPE of around 0.195, which indicates that our models performed roughly the same as one another in accurately predicting prices. Additionally, because MSPE are similar, we see no indications of our model over-fitting the training data:
 
 ```{r}
 
@@ -907,9 +907,275 @@ kable(results_table, align = "cccc", caption = "Out of Sample Performance",
       format = "html")
 ```
 
+When selecting a model, there is always a trade-off between performance and interpretability. Removing highly correlated variables improves interpretability but may not guarantee better predictive performance. For this reason, we also sought to compare the behavior of different models when using the full set of predictors, including those that are highly correlated.
+
+To conduct the analysis, we followed the same steps as previously outlined. The results are presented below:
+
+```{r}
+
+final_data[,c("neighbourhood_cleansed","latitude", "longitude"):=NULL]
+
+# Get rid of rows with NAs
+final_data <- na.omit(final_data)
+
+# Create Dummy Variables
+inds <- unique(final_data$host_response_time)
+final_data[, (inds) := lapply(inds, function(x) 
+  {ifelse(host_response_time == x, 1,0)})]
+
+final_data[,host_response_time:=NULL] ### Drop original column
+final_data[,`a few days or more`:=NULL] ### To avoid perfect collinearity
+
+inds <- unique(final_data$room_type)
+final_data[, (inds) := lapply(inds, function(x) 
+  {ifelse(room_type == x, 1, 0)})]
+
+final_data[,room_type:=NULL] ### Drop original column
+final_data[,`Shared room`:=NULL] ### To avoid perfect collinearity
+
+final_data[,host_owns_gt_5:=ifelse(host_total_listings_count > 5, 1, 0)]
+final_data[,host_owns_2_5:=ifelse(host_total_listings_count < 5 & host_total_listings_count > 1, 1,0 )]
+final_data[,host_total_listings_count:=NULL]
+
+# Add interaction variable for # of reviews * review 
+# we suspect that the number of high review scores might matter
+final_data[,review_score_ct_interaction:=review_scores_rating * number_of_reviews]
+
+### Keep a reference dataset
+full_model_data <- copy(final_data)
+
+full_model_data[,log_price := log(price)]
+full_model_data[,price:=NULL]
+
+set.seed(111) 
+
+tt_split <- createDataPartition(
+  y = full_model_data$log_price,
+  p = .80, ## The percentage of data in the training set
+  list = FALSE
+)
+
+full_data_train <- full_model_data[ tt_split,]
+full_data_test <- full_model_data[ -tt_split,]
+
+
+```
+
+::: panel-tabset
+## LM
+
+```{r}
+
+simple_lm <- lm(log_price~.,data = full_data_train)
+par(mfrow = c(2,2))
+plot(simple_lm)
+```
+
+## Stepwise
+
+```{r}
+
+null_model <- lm(log_price ~ 1, data = full_data_train[complete.cases(full_data_train)])
+full_model <- lm(log_price ~ ., data = full_data_train[complete.cases(full_data_train)])
+step_model <- step(null_model, scope = list(lower = null_model, 
+                                         upper = full_model),
+                       k = log(nrow(full_data_train)), trace = F)
+par(mfrow = c(2,2))
+plot(step_model)
+
+```
+
+## Lasso
+
+```{r}
+
+lasso_cv <- cv.glmnet(full_data_train[, !"log_price", with=FALSE] |> as.matrix(),
+                         full_data_train[,log_price] |> as.matrix(),
+                         alpha=1,
+                         nfolds=10)
+par(mfrow = c(2,2))
+#plot(lm_lasso_cv)
+lasso_model <- glmnet(full_data_train[, !"log_price", with=FALSE] |> as.matrix(),
+                      full_data_train[,log_price] |> as.matrix(),
+                      alpha=1,
+                      lambda = lasso_cv$lambda.min)
+lasso_fitted <- predict(lasso_cv,
+                        newx = full_data_train[, !"log_price", with = FALSE] |> as.matrix(), 
+                       s = lasso_cv$lambda.min)
+# Compute residuals
+lasso_residuals <- full_data_train[, log_price] - lasso_fitted
+# Compute standardized residuals
+std_residuals_lasso <- lasso_residuals / sd(lasso_residuals)
+# 1. Residuals vs Fitted
+plot(lasso_fitted, lasso_residuals,
+     main = "Residuals vs Fitted",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     pch = 1,
+     col = "black")
+abline(h = 0, col = "red", lty = 2)
+# 2. Normal Q-Q Plot
+qqnorm(lasso_residuals, main = "Normal Q-Q")
+qqline(lasso_residuals, col = "red", lty = 2)
+# 3. Scale-Location Plot
+plot(lasso_fitted, sqrt(abs(std_residuals_lasso)),
+     main = "Scale-Location",
+     xlab = "Fitted Values",
+     ylab = expression(sqrt("|Standardized residuals|")),
+     pch = 1,
+     col = "black")
+abline(h = 0, col = "red", lty = 2)
+# 4. Residuals vs Leverage
+# Leverage and Cook's distance are not directly available from glmnet.
+# Approximate by treating leverage as the influence of fitted values.
+# Approximation: Simulate leverage-like values (optional)
+lasso_leverages <- hatvalues(lm(full_data_train[, log_price] ~ as.matrix(full_data_train[, !"log_price", with = FALSE])))
+plot(lasso_leverages, lasso_residuals, 
+     main = "Residuals vs Leverage",
+     xlab = "Leverage",
+     ylab = "Residuals",
+     pch = 1,
+     col = "black")
+abline(h = 0, col = "red", lty = 2)
+
+```
+
+## Ridge
+
+```{r}
+
+ridge_cv <- cv.glmnet(full_data_train[, !"log_price", with=FALSE] |> as.matrix(),
+                        full_data_train[,log_price] |> as.matrix(),
+                         alpha=0,
+                         nfolds=10)
+#coef(lm_ridge_cv, s=lm_ridge_cv$lambda.min)
+par(mfrow = c(2,2))
+#plot(lm_ridge_cv)
+ridge_model <- glmnet(full_data_train[, !"log_price", with=FALSE] |> as.matrix(),
+                      full_data_train[,log_price] |> as.matrix(),
+                      alpha=0,
+                      lambda = ridge_cv$lambda.min)
+ridge_fitted <- predict(ridge_cv,
+                        newx = full_data_train[, !"log_price", with = FALSE] |> as.matrix(), 
+                       s = ridge_cv$lambda.min)
+# Compute residuals
+ridge_residuals <- full_data_train[, log_price] - ridge_fitted
+# Compute standardized residuals
+std_residuals_ridge <- ridge_residuals / sd(ridge_residuals)
+# 1. Residuals vs Fitted
+plot(ridge_fitted, ridge_residuals,
+     main = "Residuals vs Fitted",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     pch = 1,
+     col = "black")
+abline(h = 0, col = "red", lty = 2)
+# 2. Normal Q-Q Plot
+qqnorm(ridge_residuals, main = "Normal Q-Q")
+qqline(ridge_residuals, col = "red", lty = 2)
+# 3. Scale-Location Plot
+plot(ridge_fitted, sqrt(abs(std_residuals_ridge)),
+     main = "Scale-Location",
+     xlab = "Fitted Values",
+     ylab = expression(sqrt("|Standardized residuals|")),
+     pch = 1,
+     col = "black")
+abline(h = 0, col = "red", lty = 2)
+# 4. Residuals vs Leverage
+# Leverage and Cook's distance are not directly available from glmnet.
+# Approximate by treating leverage as the influence of fitted values.
+# Approximation: Simulate leverage-like values (optional)
+ridge_leverages <- hatvalues(lm(full_data_train[, log_price] ~ as.matrix(full_data_train[, !"log_price", with = FALSE])))
+plot(ridge_leverages, ridge_residuals, 
+     main = "Residuals vs Leverage",
+     xlab = "Leverage",
+     ylab = "Residuals",
+     pch = 1,
+     col = "black")
+abline(h = 0, col = "red", lty = 2)
+
+```
+:::
+
+```{r, warning = FALSE}
+
+# In-sample average sum squared error (ASE)
+
+ASE_lm <- mean(simple_lm$residuals^2)
+MSE_lm <- summary(simple_lm)$sigma^2
+
+ASE_step <- mean(step_model$residuals^2)
+MSE_step <- summary(step_model)$sigma^2
+
+lasso_residuals <- full_data_train[, log_price] - lasso_fitted
+ASE_lasso <- mean(lasso_residuals^2)
+
+non_zero_coefs <- sum(coef(lasso_model, s = lasso_cv$lambda.min) != 0)
+df_lasso <- nrow(full_data_train) - non_zero_coefs  
+RSS_lasso <- sum(lasso_residuals^2)
+MSE_lasso <- RSS_lasso / df_lasso
+
+ridge_residuals <- full_data_train[, log_price] - ridge_fitted
+ASE_ridge <- mean(ridge_residuals^2)
+
+sse_values_ridge <- sum((ridge_residuals)^2)
+
+# Remove the 'logprice' column and convert to matrix
+X <- full_data_train[, !"log_price", with=FALSE] |> as.matrix()
+
+best_lambda_ridge <- ridge_cv$lambda.min
+hat_matrix_ridge <- X %*% solve(t(X) %*% X + 
+                                  best_lambda_ridge * diag(ncol(X))) %*% t(X)
+edf_ridge <- sum(diag(hat_matrix_ridge)) # EDF (Model DF) 
+df_ridge <- nrow(full_data_train) - edf_ridge # Residuals DF
+    
+MSE_ridge <- sse_values_ridge/df_ridge
+
+results_table <- tibble(
+  Model = c("OLS", "Stepwise Regression", "Lasso", "Ridge"),
+  ASE = c(ASE_lm, ASE_step, ASE_lasso, ASE_ridge),
+  MSE = c(MSE_lm, MSE_step, MSE_lasso, MSE_ridge)
+)
+
+# Display the table using kable
+kable(results_table, align = "cccc", caption = "Model Comparison: ASE and MSE",
+      format = "html")
+```
+
+```{r}
+
+x_test <- full_data_test %>%
+  dplyr::select(-log_price)
+
+y_hat_test_ols <- predict(simple_lm, x_test)
+MSPE_lm <- mean((full_data_test$log_price - y_hat_test_ols)^2)
+
+y_hat_test_step <- predict(step_model, x_test)
+MSPE_step <- mean((full_data_test$log_price - y_hat_test_step)^2)
+
+x_test <- as.matrix(x_test)
+y_hat_test_lasso <- predict(lasso_model, x_test,
+                            s = lasso_cv$lambda.min)
+MSPE_lasso <- mean((full_data_test$log_price - y_hat_test_lasso)^2)
+
+y_hat_test_ridge <- predict(ridge_model, x_test, s = ridge_cv$lambda.min)
+MSPE_ridge <- mean((full_data_test$log_price - y_hat_test_ridge)^2)
+
+results_table <- tibble(
+  Model = c("OLS", "Stepwise Regression", "Lasso", "Ridge"),
+  MSPE = c(MSPE_lm, MSPE_step, MSPE_lasso, MSPE_ridge)
+)
+
+# Display the table using kable
+kable(results_table, align = "cccc", caption = "Out of Sample Performance",
+      format = "html")
+```
+
+As shown above, when using the model with correlated predictors, all methods demonstrate improved predictive performance. Since the goal of our project is to predict Airbnb prices in the New Orleans area, we have decided to use the model with correlated predictors, as it yields better predictive results.
+
 ### The Winner: Lasso
 
-We chose the Lasso model to be our final price prediction model because it had 1) the lowest MSPE of all of our models and 2) was more parsimonious than models of comparable accuracy.
+We chose the Lasso model to be our final price prediction model because it had the lowest MSPE of all of our models and was more parsimonious than models of comparable accuracy.
 
 This model fit the data using 36 of 48 variables supplied to it, and achieved an MSPE of 0.1586327.
 
