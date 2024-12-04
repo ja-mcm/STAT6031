@@ -31,7 +31,7 @@ library(car)
 
 # Section 1 - Data Description
 
-The dataset for this project can be accessed via the following link: <https://insideairbnb.com/get-the-data/>, under section "New Orleans, Louisiana, United States" and under the file "listings.csv.gz."
+The dataset for this project can be accessed via the following link: <https://insideairbnb.com/get-the-data/>, under section \`\`New Orleans, Louisiana, United States", and under the file \`\`listings.csv.gz."
 
 It contains 7,118 observations and 75 covariates related to Airbnb listings in the New Orleans, Louisiana area. For a detailed description of each covariate, please refer to the following document: <https://docs.google.com/spreadsheets/d/1iWCNJcSutYqpULSQHlNyGInUvHg2BoUGoNRIGa6Szc4/edit?gid=1322284596#gid=1322284596>.
 
@@ -39,7 +39,7 @@ It contains 7,118 observations and 75 covariates related to Airbnb listings in t
 
 # Section 2 - Data Cleaning
 
-Our analysis aims to predict Airbnb prices in the New Orleans area using various metrics, with "price" serving as the dependent variable. To ensure the quality and reliability of the data, we began by cleaning the dataset. This initial step involved several key tasks, including the removal of dollar signs from the price column and filtering out rows with missing price information.
+Our analysis aims to predict Airbnb prices in the New Orleans area using various metrics, with \`\`price" serving as the dependent variable. To ensure the quality and reliability of the data, we began by cleaning the dataset. This initial step involved several key tasks, including the removal of dollar signs from the price column and filtering out rows with missing price information.
 
 Further data preparation involved parsing the amenities column, which was in JSON format, to identify potentially significant amenities that could influence price predictions. We also removed rows containing unrealistic price values or listings with zero availability, as these could skew the analysis.
 
@@ -87,9 +87,9 @@ bnb_data <- bnb_data[!(((price>high_low[2] | price<high_low[1]) & availability_3
 
 Next, we proceeded to select the most relevant variables for our analysis. We removed columns containing URLs, IDs, names, descriptions, and overviews, as well as columns with neighborhood information, since we already had latitude and longitude data. Additionally, we eliminated columns with redundant information or those filled entirely with missing values (NAs).
 
-After removing unnecessary columns, we ensured the data was in a workable format by standardizing missing values, coding them all as NA (as some were empty cells and others were "N/A"). We also converted the boolean columns from "True/False" to 1/0, where 1 corresponded to True and 0 to False. Furthermore, we removed percentage symbols from certain columns to convert them into numeric values.
+After removing unnecessary columns, we ensured the data was in a workable format by standardizing missing values, coding them all as NA (as some were empty cells and others were \`\`N/A"). We also converted the boolean columns from \`\`True/False" to 1/0, where 1 corresponded to True and 0 to False. Furthermore, we removed percentage symbols from certain columns to convert them into numeric values.
 
-To improve the utility of the data, we modified the "host_since" column to reflect the number of years the host had been active, making it easier to model. In addition to these adjustments, we incorporated spatial data by adding the locations of the top 10 destinations in the area, as listed by TripAdvisor, and created a new column to count the number of points of interest within a 1 km radius of each rental.
+To improve the utility of the data, we modified the \`\`host_since" column to reflect the number of years the host had been active, making it easier to model. In addition to these adjustments, we incorporated spatial data by adding the locations of the top 10 destinations in the area, as listed by TripAdvisor, and created a new column to count the number of points of interest within a 1 km radius of each rental.
 
 Below, you can observe two New Orleans maps, showing the spatial location of each Airbnb in the New Orleans area as well as the ones within 1 km of a top 10 TripAdvisor destination:
 
@@ -219,6 +219,8 @@ final_data <- bnb_data
 
 Once we had a dataset we could work with, our next step was to explore more in depth both binary and non-binary covariates.
 
+#### Summary Statistics
+
 For each non-binary covariate, we examined key statistics, including the mean, median, standard deviation, minimum, maximum, and the number of missing values. The table below summarizes these findings:
 
 ```{r, message = FALSE}
@@ -322,7 +324,7 @@ From the table above, we observe that most hosts provide information about their
 
 Our hope is that the fact these enhanced amenities are uncommon (as opposed to something common, such as Wifi) will provide a clear signal for predicting prices for more upscale listings.
 
-### Distribution of Covariates
+#### Distribution of Covariates
 
 Reviewing our summary data, we noted that much of our data is skewed. To explore this skewness in more detail, we analyzed the distributions using boxplots and density plots:
 
@@ -452,11 +454,17 @@ create_plots(selected_columns_7)
 ```
 :::
 
-The distribution plots above highlighted a few concerns with the data that we sought to address: 1) Our dependent variable (price) is strongly skewed 2) most of our covariates are skewed and multimodal 3) a few covariates contain outliers, and 4) some of our covariates are highly correlated.
+The distribution plots above highlighted a few concerns with the data that we sought to address:
 
-### Addressing Non-Normality
+ 1) Our dependent variable (price) is strongly right skewed
 
-Taking a closer look at our dependent variable (price), we decided to log-transform our prices, given their extreme right skewness. As shown below, this step helped make the distribution of values for this variable more normal.
+2) Most of our covariates are skewed and multimodal
+
+3) A few covariates contain outliers
+
+#### Addressing Non-Normality
+
+Taking a closer look at our dependent variable (price), we decided to log-transform our prices, given their extreme right skewness. As shown below, this step helped make the distribution of values for this variable closer to normality.
 
 ::: panel-tabset
 ## Before
@@ -483,7 +491,7 @@ ggplot(final_data, aes(log(price))) +
 ```
 :::
 
-### Addressing Outliers
+#### Addressing Outliers
 
 We took a closer look at which columns contained outliers and how many, and the results are summarized in the table below:
 
@@ -535,9 +543,9 @@ kable(outliers_summary, align = "lc",
 
 As shown in the table above, many variables contained outliers. However, this was primarily due to some listings that could accommodate 6, 8, 10, or even 20 people.
 
-Because each listing had a URL, we checked a handful these listings on the Airbnb website, and found that the for each "outlier" the data was valid (ie. it showed up that way on the website). Therefore, although our covariates included outliers, we decided to retain them, as they represented valid data.
+Since each listing included a URL, we reviewed a sample of these outliers directly on the Airbnb website. For each \`\`outlier," we confirmed that the data was accurate and reflected how it appeared on the platform. Therefore, despite the presence of outliers among our covariates, we chose to retain them as they represent valid and reliable data.
 
-### Addressing Multicollinearity
+#### Addressing Correlation and Multicollinearity
 
 Other aspects we examined include correlations and multicollinearity. We consider two variables to be highly correlated if their correlation is 0.7 or greater. The table below summarizes the pairs of variables that exhibit strong correlations.
 
@@ -583,15 +591,15 @@ kable(correlation_data, align = "ccc",
       caption = "Strongly Correlated Variables")
 ```
 
-To model the effect of the highly correlated variables in our model, we created an reduced dataset where we removed the most highly correlated variables.
+To address the impact of highly correlated variables in our model, we created a reduced dataset by removing the most strongly correlated predictors.
 
-In this dataset, we kept **accommodates** and removed **bathrooms**, **bedrooms**, and **beds** because **accommodates** is a broader variable that implicitly incorporates aspects such as the number of bedrooms, bathrooms, and beds. Similarly, we kept **review_scores_rating** and remove the other review categories, as they are highly correlated to the overall score.
+In this dataset, we retained **accommodates** and removed **bathrooms**, **bedrooms**, and **beds** because **accommodates** serves as a broader variable that inherently captures aspects such as the number of bedrooms, bathrooms, and beds. Similarly, we kept **review_scores_rating** and excluded the other review categories, as they were highly correlated to the overall score.
 
-We also kept **availability_365** and removed **availability_30**, **availability_60**, and **availability_90** because we are interested in non-seasonal availability, and we believe **availability_365** best represents this.
+Additionally, we retained **availability_365** and removed **availability_30**, **availability_60**, and **availability_90** because our focus is on non-seasonal availability, and we believe **availability_365** is the most representative measure.
 
-Furthermore, we chose to keep **reviews_per_month** instead of **number_of_reviews_ltm**, as it is a more directly interpretable measure of activity.
+Furthermore, we chose to keep **reviews_per_month** instead of **number_of_reviews_ltm**, as it offers a more interpretable metric for activity.
 
-After removing these variables from our reduced dataset, we did not observe any significant correlation or multicollinearity.
+After making these adjustments, the reduced data no longer exhibited significant correlations or multicollinearity among the reamining variables.
 
 ```{r}
 
@@ -615,9 +623,9 @@ vif_values <- vif(lm(reduced_data))
 
 Before modeling our data, we took a few final steps to ensure our data was in the format required for regression analysis.
 
-### Finalizing the Data
+#### Finalizing the Data
 
-We set up dummy variables for our categorical measures. We also added an interaction variable (number_of_reviews \* review_score_rating) to our data, as we believe that it is possible that more good reviews may have non-linear impact on prices:
+We created dummy variables for our categorical measures to incorporate them into the model. Additionally, we introduced an interaction term (number_of_reviews \* review_score_rating) to capture the potential non-linear impact of accumulating positive reviews on prices. We believe that the influence of a higher number of positive reviews may have a non-linear impact on prices:
 
 ```{r, warning=FALSE}
 
@@ -656,7 +664,7 @@ reduced_data[,review_score_ct_interaction:=review_scores_rating * number_of_revi
 model_data <- copy(reduced_data)
 ```
 
-The dataset was split into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis. We then did our log-transformation of price, to improve normality of our dependent variable:
+To conduct our analysis, we split the dataset into a training set (80%) and a testing set (20%) to facilitate model selection and prediction analysis. Subsequently, we applied a log-transformation to the price variable to enhance he normality of our dependent variable.
 
 ```{r}
 
@@ -673,11 +681,11 @@ data_test <- model_data[ -tt_split,]
 
 After carefully examining the covariates, we proceeded to the modeling phase.
 
-### Modeling - Reduced Dataset (no multicollinearity)
+#### Modeling - Reduced Dataset (no multicollinearity)
 
-We initially started with a simple linear model, but also created models using stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.
+We initially started with a simple linear model and then explored models using stepwise selection, Lasso, and Ridge regression to evaluate whether any of them could enhance the in-sample fit.
 
-The residuals for each model were extremely similar, so we decided to choose our model based off MSPE (mean squared prediction error) from our hold-out sample of data.
+As shown below, the residuals for each model were nearly identical. Therefore, we decided to select our model based on performance metrics, such as in-sample MSE (mean squared error) and out-of-sample MSPE (mean squared prediction error).
 
 ::: panel-tabset
 ## LM
@@ -839,7 +847,7 @@ abline(h = 0, col = "red", lty = 2)
 ```
 :::
 
-Our models also had similar MSPE of around 0.195, which indicates that our models performed roughly the same as one another in accurately predicting prices:
+Below, you can observe the in-sample performance metrics for each model:
 
 ```{r}
 
@@ -917,11 +925,13 @@ kable(results_table, align = "cccc", caption = "Out of Sample Performance",
       format = "html")
 ```
 
-When selecting a model, there is always a trade-off between performance and interpretability. Removing highly correlated variables improves interpretability but may not guarantee better predictive performance. For this reason, we also sought to compare the behavior of different models when using the full set of predictors, including those that are highly correlated.
+Upon examining the Mean Squared Prediction Error (MSPE) for each model, we found that all models achieved a similar MSPE of approximately 0.195. This suggests that the models performed comparably in their ability to accurately predict prices.
 
-### Modeling - Full Dataset (w/ multicollinearity)
+However, when selecting a model, there is always a trade-off between performance and interpretability. Removing highly correlated variables improves interpretability but may not guarantee better predictive performance. For this reason, we also sought to compare the behavior of different models when using the full set of predictors, including those that are highly correlated.
 
-To conduct the analysis, we followed the same steps as previously outlined with our full dataset. Therefore, all of the correlated columns removed during the EDA step were added back into the model. The results are presented below:
+#### Modeling - Full Dataset (w/ multicollinearity)
+
+To conduct the analysis, we followed the same steps as outlined previously, but this time using the full dataset rather than the reduced dataset. As a result, all the correlated columns that were removed during the EDA step in the reduced dataset were reintroduced into the full dataset model. The results are presented below:
 
 ```{r}
 
@@ -1187,9 +1197,9 @@ As shown above, when using the model with correlated predictors, all methods dem
 
 Since the goal of our project is to predict Airbnb prices in the New Orleans area, we have decided to use the model with correlated predictors, as it yields better predictive results.
 
-### The Winner: Lasso
+#### The Winner: Lasso
 
-We chose the Lasso model to be our final price prediction model because it had the lowest MSPE of all of our models and was more parsimonious than models of comparable accuracy.
+After carefully examining all diagnostic plots, as well as both in-sample and out-of-sample performance metrics, we chose the Lasso model to be our final price prediction model because it had the lowest MSPE of all of our models and was more parsimonious than models of comparable accuracy.
 
 This model fit the data using 36 of 48 variables supplied to it, and achieved an MSPE of 0.1586327.
 
@@ -1273,6 +1283,6 @@ For your "average" Airbnb listing, our model could predict the price reasonably 
 
 ## Further Study
 
-**Generalizing for other markets**: This model could easily be applied to Airbnb rentals from other markets, to assess how well it describes trends in those markets. By re-training across multiple markets, this model could be generalized to reliably predict prices of ANY Airbnb listing.
+**Generalizing for Other Markets**: This model could easily be applied to Airbnb rentals from other markets, to assess how well it describes trends in those markets. By re-training across multiple markets, this model could be generalized to reliably predict prices of ANY Airbnb listing.
 
-**Data Supplementation**: Our model could also benefit from adding publicly-available data to improve predictions. There were many other potential variables related to location that likely impact prices - CRIME\*, transit, local housing prices.....Many of these variables have a publicly-available data source (such as the police department) to find this data. If we had more time, we would have liked to follow up on at least some of these factors to assess their impact on pricing.
+**Data Supplementation**: Our model could also benefit from incorporating publicly-available data to improve predictions. There were numerous other location-related variables that likely impact prices, such as crime rates, transit availability, and local housing prices. Many of these variables have publicly accessible data source (such as the police department) to could provide this information. If we had more time, we would have liked to follow up on at least some of these factors to assess their impact on pricing.
